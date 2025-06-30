@@ -54,7 +54,7 @@ class FileSystemTaskRepository:
                 fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
                 raise TaskLocked()
-            change_log = self._read_and_repair_change_log(file)
+            change_log = self._read_change_log(file, repair=True)
             task = Task.rehydrate(id=task_id, events=change_log)
             yield task
             if task.change_log:
@@ -66,7 +66,7 @@ class FileSystemTaskRepository:
         file.write(data + b"\n")
         file.flush()
 
-    def _read_and_repair_change_log(self, file: BinaryIO) -> List[TaskEvent]:
+    def _read_change_log(self, file: BinaryIO, repair: bool = False) -> List[TaskEvent]:
         change_log = []
         while True:
             pos = file.tell()
@@ -76,8 +76,9 @@ class FileSystemTaskRepository:
             try:
                 events = self._load_task_events(line)
             except json.decoder.JSONDecodeError:
-                file.seek(pos)
-                file.truncate()
+                if repair:
+                    file.seek(pos)
+                    file.truncate()
                 break
             change_log.extend(events)
         assert change_log
