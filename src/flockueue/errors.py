@@ -4,3 +4,11 @@ class Error(Exception):
 
 class TooManyAttempts(Error):
     pass
+
+
+class TaskLocked(Error):
+    pass
+
+
+class TaskNotFound(Error):
+    pass

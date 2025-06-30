@@ -4,72 +4,89 @@ import fcntl
 import json
 import os
 import pathlib
-from typing import Generator, Optional
+import tempfile
+from typing import BinaryIO, Generator, List
 
+from .errors import TaskLocked, TaskNotFound
 from .file_system_data_mapper import FileSystemDataMapper
 from .task import Task
-from .task_specification import TaskSpecification
+from .task_events import TaskEvent
 
 
 @dataclasses.dataclass
 class FileSystemTaskRepository:
 
     data_dir_path: pathlib.Path
-    json_indent: int
 
     @classmethod
-    def new(
-        cls,
-        data_dir_path: pathlib.Path,
-        json_indent: int = 4,
-    ) -> "FileSystemTaskRepository":
+    def new(cls, data_dir_path: pathlib.Path) -> "FileSystemTaskRepository":
         try:
             os.mkdir(data_dir_path)
         except FileExistsError:
             pass
-        return cls(
-            data_dir_path=data_dir_path,
-            json_indent=json_indent,
-        )
+        return cls(data_dir_path=data_dir_path)
 
     def add_task(self, task: Task) -> None:
+        with tempfile.NamedTemporaryFile(
+            dir=self.data_dir_path,
+            delete=False,
+            suffix=".tmp",
+        ) as temp_file:
+            self._write_change_log(task.change_log, temp_file)  # type: ignore
         file_path = self.data_dir_path / f"{task.id}.json"
-        data = self._dump_task(task)
-        self._write_file(file_path, data)
+        os.replace(temp_file.name, file_path)
+
+    def list_tasks(self) -> Generator[str]:
+        for path in self.data_dir_path.iterdir():
+            if path.name.endswith(".json"):
+                (task_id, _) = path.name.split(".")
+                yield task_id
 
     @contextlib.contextmanager
-    def update_task(self, spec: TaskSpecification) -> Generator[Optional[Task]]:
-        for path in self.data_dir_path.iterdir():
-            if path.name.endswith(".tmp"):
-                continue
-            with path.open("r+b") as f:
-                try:
-                    fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                except BlockingIOError:
-                    continue
-                task = self._load_task(f.read())
-                if not spec.is_satisfied_by(task):
-                    continue
-                yield task
-                data = self._dump_task(task)
-                self._write_file(path, data)
-                return
-        yield None
+    def update_task(self, task_id: str) -> Generator[Task]:
+        path = self.data_dir_path / f"{task_id}.json"
+        try:
+            file = path.open("r+b")
+        except FileNotFoundError:
+            raise TaskNotFound()
+        with file:
+            try:
+                fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise TaskLocked()
+            change_log = self._read_and_repair_change_log(file)
+            task = Task.rehydrate(id=task_id, events=change_log)
+            yield task
+            if task.change_log:
+                self._write_change_log(task.change_log, file)
 
-    def _dump_task(self, task: Task) -> bytes:
-        dto = FileSystemDataMapper.dump_task(task)
-        return json.dumps(dto, indent=self.json_indent).encode()
+    def _write_change_log(self, change_log: List[TaskEvent], file: BinaryIO) -> None:
+        assert change_log
+        data = self._dump_task_events(change_log)
+        file.write(data + b"\n")
+        file.flush()
 
-    def _load_task(self, data: bytes) -> Task:
-        dto = json.loads(data.decode())
-        return FileSystemDataMapper.load_task(dto)
+    def _read_and_repair_change_log(self, file: BinaryIO) -> List[TaskEvent]:
+        change_log = []
+        while True:
+            pos = file.tell()
+            line = file.readline()
+            if not line:
+                break
+            try:
+                events = self._load_task_events(line)
+            except json.decoder.JSONDecodeError:
+                file.seek(pos)
+                file.truncate()
+                break
+            change_log.extend(events)
+        assert change_log
+        return change_log
 
-    @staticmethod
-    def _write_file(path: pathlib.Path, data: bytes) -> None:
-        temp_path = path.parent / f"{path.name}.tmp"
-        with temp_path.open("wb") as temp_file:
-            temp_file.write(data)
-        # NOTE: Although `os.rename` itself is atomic when operating withing a
-        # single file system, the "temp" file may be left hanging if there is
-        # an interrupt after we create the file but before we rename it.
-        os.rename(temp_path, path)
+    def _dump_task_events(self, events: List[TaskEvent]) -> bytes:
+        dto = FileSystemDataMapper.dump_task_events(events)
+        return json.dumps(dto).encode()
+
+    def _load_task_events(self, data: bytes) -> List[TaskEvent]:
+        dto = json.loads(data)
+        return FileSystemDataMapper.load_task_events(dto)

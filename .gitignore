@@ -110,3 +110,6 @@ Pipfile.lock
 
 # PyCharm
 .idea/
+
+# Data dir
+data/

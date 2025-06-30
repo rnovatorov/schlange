@@ -15,8 +15,6 @@ class TaskExecution:
         return cls(begun_at=timestamp, ended_at=None, error=None)
 
     def end(self, timestamp: datetime.datetime, error: Optional[str]) -> None:
-        assert self.begun
-        assert not self.ended
         self.ended_at = timestamp
         self.error = error
 
@@ -27,7 +25,3 @@ class TaskExecution:
     @property
     def ended(self) -> bool:
         return self.ended_at is not None
-
-    @property
-    def ok(self) -> bool:
-        return self.error is None

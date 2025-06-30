@@ -4,6 +4,7 @@ import traceback
 import uuid
 from typing import Optional
 
+from .errors import TaskLocked, TaskNotFound
 from .retry_policy import DEFAULT_RETRY_POLICY, RetryPolicy
 from .task import Task
 from .task_args import TaskArgs
@@ -36,30 +37,39 @@ class Queue:
     ) -> None:
         if id is None:
             id = str(uuid.uuid4())
-        ready_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
-            seconds=delay
-        )
         if retry_policy is None:
             retry_policy = self.retry_policy
-        task = Task.new(id=id, args=args, ready_at=ready_at, retry_policy=retry_policy)
+        task = Task.create(
+            now=datetime.datetime.now(datetime.UTC),
+            id=id,
+            args=args,
+            delay=delay,
+            retry_policy=retry_policy,
+        )
         self.task_repository.add_task(task)
 
-    def execute_task(self, executor: TaskExecutor) -> bool:
-        with self.task_repository.update_task(
-            TaskSpecification(
-                state=TaskState.ACTIVE,
-                ready_as_of=datetime.datetime.now(datetime.UTC),
-            )
-        ) as task:
-            if task is None:
-                return False
-            task.begin_execution(timestamp=datetime.datetime.now(datetime.UTC))
-            error: Optional[str] = None
+    def execute_tasks(self, executor: TaskExecutor) -> bool:
+        spec = TaskSpecification(state=TaskState.ACTIVE, ready_as_of=self._now())
+        queue = self.task_repository.list_tasks()
+        progress_made = False
+        for task_id in queue:
             try:
-                executor(task.id, task.args)
-            except Exception:
-                error = traceback.format_exc()
-            task.end_execution(
-                timestamp=datetime.datetime.now(datetime.UTC), error=error
-            )
-            return True
+                with self.task_repository.update_task(task_id) as task:
+                    if not spec.is_satisfied_by(task):
+                        continue
+                    task.begin_execution(now=self._now())
+                    error: Optional[str] = None
+                    try:
+                        executor(task.id, task.args)
+                    except Exception:
+                        error = traceback.format_exc()
+                    task.end_execution(now=self._now(), error=error)
+                    progress_made = True
+            except TaskLocked:
+                continue
+            except TaskNotFound:
+                continue
+        return progress_made
+
+    def _now(self) -> datetime.datetime:
+        return datetime.datetime.now(datetime.UTC)

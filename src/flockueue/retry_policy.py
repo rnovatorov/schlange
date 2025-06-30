@@ -27,7 +27,7 @@ class RetryPolicy:
 
 
 DEFAULT_RETRY_POLICY = RetryPolicy(
-    initial_delay=0.5,
+    initial_delay=1,
     backoff_factor=2.0,
     max_delay=24 * 60 * 60,
     max_attempts=20,
