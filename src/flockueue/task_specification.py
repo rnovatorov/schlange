@@ -18,6 +18,6 @@ class TaskSpecification:
             return False
         if self.state is not None and task.state != self.state:
             return False
-        if self.ready_as_of is not None and not task.ready_at <= self.ready_as_of:
+        if self.ready_as_of is not None and not task.ready_as_of(self.ready_as_of):
             return False
         return True

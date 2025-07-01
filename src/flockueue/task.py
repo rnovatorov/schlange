@@ -37,6 +37,10 @@ class Task(Aggregate[TaskEvent, TaskProjection]):
         assert self._projection is not None
         return self._projection.args
 
+    def ready_as_of(self, timestamp: datetime.datetime) -> bool:
+        assert self._projection is not None
+        return self._projection.ready_at <= timestamp
+
     @property
     def ready_at(self) -> datetime.datetime:
         assert self._projection is not None

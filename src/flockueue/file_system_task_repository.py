@@ -5,12 +5,13 @@ import json
 import os
 import pathlib
 import tempfile
-from typing import BinaryIO, Generator, List
+from typing import BinaryIO, Generator, List, Optional
 
 from .errors import TaskLocked, TaskNotFound
 from .file_system_data_mapper import FileSystemDataMapper
 from .task import Task
 from .task_events import TaskEvent
+from .task_specification import TaskSpecification
 
 
 @dataclasses.dataclass
@@ -36,11 +37,15 @@ class FileSystemTaskRepository:
         file_path = self.data_dir_path / f"{task.id}.json"
         os.replace(temp_file.name, file_path)
 
-    def list_tasks(self) -> Generator[str]:
+    def list_tasks(self, spec: Optional[TaskSpecification] = None) -> Generator[Task]:
         for path in self.data_dir_path.iterdir():
             if path.name.endswith(".json"):
                 (task_id, _) = path.name.split(".")
-                yield task_id
+                with path.open("rb") as file:
+                    change_log = self._read_change_log(file)
+                    task = Task.rehydrate(id=task_id, events=change_log)
+                    if spec is None or spec.is_satisfied_by(task):
+                        yield task
 
     @contextlib.contextmanager
     def update_task(self, task_id: str) -> Generator[Task]:

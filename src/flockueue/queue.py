@@ -2,7 +2,7 @@ import dataclasses
 import datetime
 import traceback
 import uuid
-from typing import Optional
+from typing import Generator, Optional
 
 from .errors import TaskLocked, TaskNotFound
 from .retry_policy import DEFAULT_RETRY_POLICY, RetryPolicy
@@ -28,48 +28,46 @@ class Queue:
     ) -> "Queue":
         return cls(task_repository=task_repository, retry_policy=retry_policy)
 
-    def add_task(
+    def create_task(
         self,
         args: TaskArgs,
-        id: Optional[str] = None,
         delay: float = 0.0,
         retry_policy: Optional[RetryPolicy] = None,
-    ) -> None:
-        if id is None:
-            id = str(uuid.uuid4())
-        if retry_policy is None:
-            retry_policy = self.retry_policy
+    ) -> Task:
         task = Task.create(
-            now=datetime.datetime.now(datetime.UTC),
-            id=id,
+            now=self._now(),
+            id=str(uuid.uuid4()),
             args=args,
             delay=delay,
-            retry_policy=retry_policy,
+            retry_policy=(
+                retry_policy if retry_policy is not None else self.retry_policy
+            ),
         )
         self.task_repository.add_task(task)
+        return task
 
-    def execute_tasks(self, executor: TaskExecutor) -> bool:
+    def find_executable_tasks(self) -> Generator[Task]:
         spec = TaskSpecification(state=TaskState.ACTIVE, ready_as_of=self._now())
-        queue = self.task_repository.list_tasks()
-        progress_made = False
-        for task_id in queue:
-            try:
-                with self.task_repository.update_task(task_id) as task:
-                    if not spec.is_satisfied_by(task):
-                        continue
-                    task.begin_execution(now=self._now())
-                    error: Optional[str] = None
-                    try:
-                        executor(task.id, task.args)
-                    except Exception:
-                        error = traceback.format_exc()
-                    task.end_execution(now=self._now(), error=error)
-                    progress_made = True
-            except TaskLocked:
-                continue
-            except TaskNotFound:
-                continue
-        return progress_made
+        return self.task_repository.list_tasks(spec=spec)
+
+    def execute_task(self, task_id: str, executor: TaskExecutor) -> bool:
+        spec = TaskSpecification(state=TaskState.ACTIVE, ready_as_of=self._now())
+        try:
+            with self.task_repository.update_task(task_id) as task:
+                if not spec.is_satisfied_by(task):
+                    return False
+                task.begin_execution(now=self._now())
+                error: Optional[str] = None
+                try:
+                    executor(task)
+                except Exception:
+                    error = traceback.format_exc()
+                task.end_execution(now=self._now(), error=error)
+                return True
+        except TaskLocked:
+            return False
+        except TaskNotFound:
+            return False
 
     def _now(self) -> datetime.datetime:
         return datetime.datetime.now(datetime.UTC)

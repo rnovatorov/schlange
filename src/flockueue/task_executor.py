@@ -1,5 +1,5 @@
 from typing import Callable
 
-from .task_args import TaskArgs
+from .task import Task
 
-TaskExecutor = Callable[[str, TaskArgs], None]
+TaskExecutor = Callable[[Task], None]

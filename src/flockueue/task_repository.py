@@ -1,7 +1,8 @@
 import contextlib
-from typing import Generator, Protocol
+from typing import Generator, Optional, Protocol
 
 from .task import Task
+from .task_specification import TaskSpecification
 
 
 class TaskRepository(Protocol):
@@ -9,7 +10,7 @@ class TaskRepository(Protocol):
     def add_task(self, task: Task) -> None:
         pass
 
-    def list_tasks(self) -> Generator[str]:
+    def list_tasks(self, spec: Optional[TaskSpecification] = None) -> Generator[Task]:
         pass
 
     @contextlib.contextmanager
