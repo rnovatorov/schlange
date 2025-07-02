@@ -49,7 +49,7 @@ class Client:
             max_delay=60 * 60 * 24,
             max_attempts=20,
         ),
-        execution_worker_interval: float = 5,
+        execution_worker_interval: float = 1,
         cleanup_policy: CleanupPolicy = CleanupPolicy(
             delete_succeeded_after=60 * 60 * 24,
             delete_failed_after=60 * 60 * 24 * 7,
@@ -89,3 +89,6 @@ class Client:
         retry_policy: Optional[RetryPolicy] = None,
     ) -> Task:
         return self.queue.create_task(args=args, delay=delay, retry_policy=retry_policy)
+
+    def find_task(self, task_id: str) -> Task:
+        return self.queue.find_task(task_id)

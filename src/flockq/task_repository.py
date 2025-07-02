@@ -10,6 +10,9 @@ class TaskRepository(Protocol):
     def add_task(self, task: Task) -> None:
         pass
 
+    def get_task(self, task_id: str) -> Task:
+        pass
+
     def list_tasks(self, spec: TaskSpecification) -> Generator[Task]:
         pass
 

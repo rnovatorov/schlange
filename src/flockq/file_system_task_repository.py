@@ -29,6 +29,16 @@ class FileSystemTaskRepository:
         file_path = self.data_dir_path / f"{task.id}.json"
         os.replace(temp_file.name, file_path)
 
+    def get_task(self, task_id: str) -> Task:
+        path = self.data_dir_path / f"{task_id}.json"
+        try:
+            file = path.open("r+b")
+        except FileNotFoundError:
+            raise TaskNotFound()
+        with file:
+            change_log = self._read_change_log(file)
+            return Task.rehydrate(id=task_id, events=change_log)
+
     def list_tasks(self, spec: TaskSpecification) -> Generator[Task]:
         for path in self.data_dir_path.iterdir():
             if not path.name.endswith(".json"):

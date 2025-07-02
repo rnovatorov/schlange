@@ -39,6 +39,12 @@ class Queue:
         self.task_repository.add_task(task)
         return task
 
+    def find_task(self, task_id: str) -> Optional[Task]:
+        try:
+            return self.task_repository.get_task(task_id)
+        except TaskNotFound:
+            return None
+
     def find_deletable_tasks(self) -> Generator[Task]:
         return self.task_repository.list_tasks(
             spec=TaskIsDeletable(self._now(), self.cleanup_policy)
