@@ -9,7 +9,7 @@ class CleanupPolicy:
     delete_failed_after: float
 
     def succeeded_deadline(self, now: datetime.datetime) -> datetime.datetime:
-        return now - datetime.timedelta(self.delete_succeeded_after)
+        return now - datetime.timedelta(seconds=self.delete_succeeded_after)
 
     def failed_deadline(self, now: datetime.datetime) -> datetime.datetime:
-        return now - datetime.timedelta(self.delete_failed_after)
+        return now - datetime.timedelta(seconds=self.delete_failed_after)
