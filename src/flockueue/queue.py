@@ -4,14 +4,14 @@ import traceback
 import uuid
 from typing import Generator, Optional
 
-from .errors import TaskLocked, TaskNotFound
-from .retry_policy import DEFAULT_RETRY_POLICY, RetryPolicy
+from .cleanup_policy import CleanupPolicy
+from .errors import TaskLocked, TaskNotActive, TaskNotFound, TaskNotReady
+from .retry_policy import RetryPolicy
 from .task import Task
 from .task_args import TaskArgs
 from .task_executor import TaskExecutor
 from .task_repository import TaskRepository
-from .task_specification import TaskSpecification
-from .task_state import TaskState
+from .task_specification import TaskIsDeletable, TaskIsExecutable
 
 
 @dataclasses.dataclass
@@ -19,19 +19,12 @@ class Queue:
 
     task_repository: TaskRepository
     retry_policy: RetryPolicy
-
-    @classmethod
-    def new(
-        cls,
-        task_repository: TaskRepository,
-        retry_policy: RetryPolicy = DEFAULT_RETRY_POLICY,
-    ) -> "Queue":
-        return cls(task_repository=task_repository, retry_policy=retry_policy)
+    cleanup_policy: CleanupPolicy
 
     def create_task(
         self,
         args: TaskArgs,
-        delay: float = 0.0,
+        delay: float,
         retry_policy: Optional[RetryPolicy] = None,
     ) -> Task:
         task = Task.create(
@@ -46,17 +39,30 @@ class Queue:
         self.task_repository.add_task(task)
         return task
 
+    def find_deletable_tasks(self) -> Generator[Task]:
+        return self.task_repository.list_tasks(
+            spec=TaskIsDeletable(self._now(), self.cleanup_policy)
+        )
+
+    def delete_task(self, task_id: str) -> bool:
+        try:
+            self.task_repository.delete_task(task_id)
+            return True
+        except TaskNotFound:
+            return False
+
     def find_executable_tasks(self) -> Generator[Task]:
-        spec = TaskSpecification(state=TaskState.ACTIVE, ready_as_of=self._now())
-        return self.task_repository.list_tasks(spec=spec)
+        return self.task_repository.list_tasks(spec=TaskIsExecutable(self._now()))
 
     def execute_task(self, task_id: str, executor: TaskExecutor) -> bool:
-        spec = TaskSpecification(state=TaskState.ACTIVE, ready_as_of=self._now())
         try:
             with self.task_repository.update_task(task_id) as task:
-                if not spec.is_satisfied_by(task):
+                try:
+                    task.begin_execution(now=self._now())
+                except TaskNotActive:
                     return False
-                task.begin_execution(now=self._now())
+                except TaskNotReady:
+                    return False
                 error: Optional[str] = None
                 try:
                     executor(task)

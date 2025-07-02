@@ -2,7 +2,7 @@ import datetime
 from typing import List, Optional
 
 from .aggregate import Aggregate
-from .errors import TooManyAttempts
+from .errors import TaskNotActive, TaskNotReady, TooManyAttempts
 from .retry_policy import RetryPolicy
 from .task_args import TaskArgs
 from .task_events import (TaskCreated, TaskDelayed, TaskEvent,
@@ -37,10 +37,6 @@ class Task(Aggregate[TaskEvent, TaskProjection]):
         assert self._projection is not None
         return self._projection.args
 
-    def ready_as_of(self, timestamp: datetime.datetime) -> bool:
-        assert self._projection is not None
-        return self._projection.ready_at <= timestamp
-
     @property
     def ready_at(self) -> datetime.datetime:
         assert self._projection is not None
@@ -66,7 +62,10 @@ class Task(Aggregate[TaskEvent, TaskProjection]):
         return self._projection.retry_policy
 
     def begin_execution(self, now: datetime.datetime) -> None:
-        assert self.state is TaskState.ACTIVE
+        if self.state is not TaskState.ACTIVE:
+            raise TaskNotActive()
+        if not self.ready_at <= now:
+            raise TaskNotReady()
         assert self.last_execution is None or self.last_execution.ended
         self._emit(TaskExecutionBegun(timestamp=now))
 

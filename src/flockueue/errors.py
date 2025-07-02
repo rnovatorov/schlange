@@ -12,3 +12,11 @@ class TaskLocked(Error):
 
 class TaskNotFound(Error):
     pass
+
+
+class TaskNotActive(Error):
+    pass
+
+
+class TaskNotReady(Error):
+    pass

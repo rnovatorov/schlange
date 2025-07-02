@@ -5,7 +5,7 @@ import json
 import os
 import pathlib
 import tempfile
-from typing import BinaryIO, Generator, List, Optional
+from typing import BinaryIO, Generator, List
 
 from .errors import TaskLocked, TaskNotFound
 from .file_system_data_mapper import FileSystemDataMapper
@@ -19,14 +19,6 @@ class FileSystemTaskRepository:
 
     data_dir_path: pathlib.Path
 
-    @classmethod
-    def new(cls, data_dir_path: pathlib.Path) -> "FileSystemTaskRepository":
-        try:
-            os.mkdir(data_dir_path)
-        except FileExistsError:
-            pass
-        return cls(data_dir_path=data_dir_path)
-
     def add_task(self, task: Task) -> None:
         with tempfile.NamedTemporaryFile(
             dir=self.data_dir_path,
@@ -37,15 +29,24 @@ class FileSystemTaskRepository:
         file_path = self.data_dir_path / f"{task.id}.json"
         os.replace(temp_file.name, file_path)
 
-    def list_tasks(self, spec: Optional[TaskSpecification] = None) -> Generator[Task]:
+    def list_tasks(self, spec: TaskSpecification) -> Generator[Task]:
         for path in self.data_dir_path.iterdir():
-            if path.name.endswith(".json"):
-                (task_id, _) = path.name.split(".")
-                with path.open("rb") as file:
-                    change_log = self._read_change_log(file)
-                    task = Task.rehydrate(id=task_id, events=change_log)
-                    if spec is None or spec.is_satisfied_by(task):
-                        yield task
+            if not path.name.endswith(".json"):
+                continue
+            (task_id, _) = path.name.split(".")
+            with path.open("rb") as file:
+                change_log = self._read_change_log(file)
+                task = Task.rehydrate(id=task_id, events=change_log)
+                if spec.is_satisfied_by(task):
+                    yield task
+
+    def delete_task(self, task_id: str) -> None:
+        path = self.data_dir_path / f"{task_id}.json"
+        # NOTE: It would be dangerous to delete a task that's being worked on.
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            raise TaskNotFound()
 
     @contextlib.contextmanager
     def update_task(self, task_id: str) -> Generator[Task]:
