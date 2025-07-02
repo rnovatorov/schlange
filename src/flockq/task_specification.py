@@ -71,21 +71,3 @@ class TaskIsDeletable(TaskSpecification):
                 & LastTaskExecutionHasEndedBefore(failed_deadline)
             )
         ).is_satisfied_by(task)
-
-
-# @dataclasses.dataclass
-# class TaskSpecificationOld:
-#
-#     id: Optional[str] = None
-#     state: Optional[TaskState] = None
-#     ready_as_of: Optional[datetime.datetime] = None
-#     last_execution_ended_before: Optional[datetime.datetime] = None
-#
-#     def is_satisfied_by(self, task: Task) -> bool:
-#         if self.id is not None and task.id != self.id:
-#             return False
-#         if self.state is not None and task.state != self.state:
-#             return False
-#         if self.ready_as_of is not None and not task.ready_as_of(self.ready_as_of):
-#             return False
-#         return True
