@@ -22,8 +22,8 @@ class ExecutionWorker(Worker):
         self.processes = processes
 
     def start(self) -> None:
-        super().start()
         self.thread_pool = multiprocessing.pool.ThreadPool(processes=self.processes)
+        super().start()
 
     def stop(self) -> None:
         if self.thread_pool is not None:
