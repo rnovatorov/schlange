@@ -4,8 +4,8 @@ from .worker import Worker
 
 class CleanupWorker(Worker):
 
-    def __init__(self, queue: Queue, interval: float) -> None:
-        super().__init__(name="flockueue.cleanup_worker", interval=interval)
+    def __init__(self, interval: float, queue: Queue) -> None:
+        super().__init__(name="flockq.cleanup_worker", interval=interval)
         self.queue = queue
 
     def work(self) -> None:

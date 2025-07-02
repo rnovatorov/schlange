@@ -15,7 +15,7 @@ class ExecutionWorker(Worker):
         executor: TaskExecutor,
         processes: Optional[int] = None,
     ) -> None:
-        super().__init__(name="flockueue.execution_worker", interval=interval)
+        super().__init__(name="flockq.execution_worker", interval=interval)
         self.queue = queue
         self.executor = executor
         self.thread_pool: Optional[multiprocessing.pool.ThreadPool] = None
