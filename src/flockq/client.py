@@ -11,13 +11,14 @@ from .queue import Queue
 from .retry_policy import RetryPolicy
 from .task import Task
 from .task_args import TaskArgs
+from .task_executor import TaskExecutor
 
 
 @dataclasses.dataclass
 class Client:
 
     queue: Queue
-    execution_worker: ExecutionWorker
+    execution_worker: Optional[ExecutionWorker]
     cleanup_worker: CleanupWorker
 
     def __enter__(self) -> "Client":
@@ -28,17 +29,20 @@ class Client:
         self.stop()
 
     def start(self) -> None:
-        self.execution_worker.start()
+        if self.execution_worker is not None:
+            self.execution_worker.start()
         self.cleanup_worker.start()
 
     def stop(self) -> None:
         self.cleanup_worker.stop()
-        self.execution_worker.stop()
+        if self.execution_worker is not None:
+            self.execution_worker.stop()
 
     @classmethod
     def new(
         cls,
         data_dir_path: Union[str, pathlib.Path],
+        executor: Optional[TaskExecutor],
         retry_policy: RetryPolicy = RetryPolicy(
             initial_delay=1,
             backoff_factor=2.0,
@@ -64,10 +68,14 @@ class Client:
             retry_policy=retry_policy,
             cleanup_policy=cleanup_policy,
         )
-        execution_worker = ExecutionWorker(
-            queue=queue, interval=execution_worker_interval
+        execution_worker = (
+            ExecutionWorker(
+                interval=execution_worker_interval, queue=queue, executor=executor
+            )
+            if executor is not None
+            else None
         )
-        cleanup_worker = CleanupWorker(queue=queue, interval=cleanup_worker_interval)
+        cleanup_worker = CleanupWorker(interval=cleanup_worker_interval, queue=queue)
         return cls(
             queue=queue,
             execution_worker=execution_worker,
