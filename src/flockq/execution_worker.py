@@ -2,6 +2,7 @@ import multiprocessing.pool
 from typing import Optional
 
 from .queue import Queue
+from .task import Task
 from .task_executor import TaskExecutor
 from .worker import Worker
 
@@ -35,4 +36,9 @@ class ExecutionWorker(Worker):
         progress_made = True
         while progress_made:
             tasks = self.queue.find_executable_tasks()
-            progress_made = any(self.thread_pool.imap_unordered(self.executor, tasks))
+            progress_made = any(
+                self.thread_pool.imap_unordered(self._execute_task, tasks)
+            )
+
+    def _execute_task(self, task: Task) -> bool:
+        return self.queue.execute_task(task.id, executor=self.executor)
