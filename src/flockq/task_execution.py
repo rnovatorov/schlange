@@ -25,3 +25,9 @@ class TaskExecution:
     @property
     def ended(self) -> bool:
         return self.ended_at is not None
+
+    @property
+    def duration(self) -> Optional[datetime.timedelta]:
+        if self.ended_at is None:
+            return None
+        return self.ended_at - self.begun_at

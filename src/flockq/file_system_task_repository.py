@@ -2,16 +2,19 @@ import contextlib
 import dataclasses
 import fcntl
 import json
+import logging
 import os
 import pathlib
 import tempfile
 from typing import BinaryIO, Generator, List
 
-from .errors import TaskLocked, TaskNotFound
+from .errors import TaskLockedError, TaskNotFoundError
 from .file_system_data_mapper import FileSystemDataMapper
 from .task import Task
 from .task_events import TaskEvent
 from .task_specification import TaskSpecification
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
@@ -34,7 +37,7 @@ class FileSystemTaskRepository:
         try:
             file = path.open("r+b")
         except FileNotFoundError:
-            raise TaskNotFound()
+            raise TaskNotFoundError()
         with file:
             change_log = self._read_change_log(file)
             return Task.rehydrate(id=task_id, events=change_log)
@@ -56,7 +59,7 @@ class FileSystemTaskRepository:
         try:
             path.unlink()
         except FileNotFoundError:
-            raise TaskNotFound()
+            raise TaskNotFoundError()
 
     @contextlib.contextmanager
     def update_task(self, task_id: str) -> Generator[Task]:
@@ -64,12 +67,12 @@ class FileSystemTaskRepository:
         try:
             file = path.open("r+b")
         except FileNotFoundError:
-            raise TaskNotFound()
+            raise TaskNotFoundError()
         with file:
             try:
                 fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
-                raise TaskLocked()
+                raise TaskLockedError()
             change_log = self._read_change_log(file, repair=True)
             task = Task.rehydrate(id=task_id, events=change_log)
             yield task

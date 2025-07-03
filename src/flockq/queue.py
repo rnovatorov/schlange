@@ -5,7 +5,6 @@ import uuid
 from typing import Generator, Optional
 
 from .cleanup_policy import CleanupPolicy
-from .errors import TaskLocked, TaskNotActive, TaskNotFound, TaskNotReady
 from .retry_policy import RetryPolicy
 from .task import Task
 from .task_args import TaskArgs
@@ -27,6 +26,10 @@ class Queue:
         delay: float,
         retry_policy: Optional[RetryPolicy] = None,
     ) -> Task:
+        """
+        Raises:
+            IOError: IO error occurred during the operation.
+        """
         task = Task.create(
             now=self._now(),
             id=str(uuid.uuid4()),
@@ -39,47 +42,52 @@ class Queue:
         self.task_repository.add_task(task)
         return task
 
-    def find_task(self, task_id: str) -> Optional[Task]:
-        try:
-            return self.task_repository.get_task(task_id)
-        except TaskNotFound:
-            return None
+    def find_task(self, task_id: str) -> Task:
+        """
+        Raises:
+            IOError: IO error occurred during the operation.
+            TaskNotFoundError: Task was not found.
+        """
+        return self.task_repository.get_task(task_id)
 
     def find_deletable_tasks(self) -> Generator[Task]:
         return self.task_repository.list_tasks(
             spec=TaskIsDeletable(self._now(), self.cleanup_policy)
         )
 
-    def delete_task(self, task_id: str) -> bool:
-        try:
-            self.task_repository.delete_task(task_id)
-            return True
-        except TaskNotFound:
-            return False
+    def delete_task(self, task_id: str) -> None:
+        """
+        Raises:
+            IOError: IO error occurred during the operation.
+            TaskNotFoundError: Task was not found.
+        """
+        self.task_repository.delete_task(task_id)
 
     def find_executable_tasks(self) -> Generator[Task]:
+        """
+        Raises:
+            IOError: IO error occurred during the operation.
+        """
         return self.task_repository.list_tasks(spec=TaskIsExecutable(self._now()))
 
-    def execute_task(self, task_id: str, executor: TaskExecutor) -> bool:
-        try:
-            with self.task_repository.update_task(task_id) as task:
-                try:
-                    task.begin_execution(now=self._now())
-                except TaskNotActive:
-                    return False
-                except TaskNotReady:
-                    return False
-                error: Optional[str] = None
-                try:
-                    executor(task)
-                except Exception:
-                    error = traceback.format_exc()
-                task.end_execution(now=self._now(), error=error)
-                return True
-        except TaskLocked:
-            return False
-        except TaskNotFound:
-            return False
+    def execute_task(self, task_id: str, executor: TaskExecutor) -> Task:
+        """
+        Raises:
+            IOError: IO error occurred during the operation.
+            TaskNotActiveError: Task is not in active state.
+            TaskNotReadyError: Task is not ready yet.
+            TaskLockedError: Task is currently locked by another thread.
+            TaskNotFoundError: Task was not found.
+        """
+        with self.task_repository.update_task(task_id) as task:
+            task.begin_execution(now=self._now())
+            error: Optional[str] = None
+            try:
+                executor(task)
+            except Exception:
+                error = traceback.format_exc()
+            task.end_execution(now=self._now(), error=error)
+            return task
 
     def _now(self) -> datetime.datetime:
         return datetime.datetime.now(datetime.UTC)

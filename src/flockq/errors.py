@@ -2,21 +2,21 @@ class Error(Exception):
     pass
 
 
-class TooManyAttempts(Error):
+class TooManyAttemptsError(Error):
     pass
 
 
-class TaskLocked(Error):
+class TaskLockedError(Error):
     pass
 
 
-class TaskNotFound(Error):
+class TaskNotFoundError(Error):
     pass
 
 
-class TaskNotActive(Error):
+class TaskNotActiveError(Error):
     pass
 
 
-class TaskNotReady(Error):
+class TaskNotReadyError(Error):
     pass

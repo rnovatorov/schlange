@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import pathlib
 import random
 import sys
@@ -11,6 +12,7 @@ from .client import Client
 
 def cli():
     args = parse_args()
+    configure_logging(level=logging.DEBUG if args.verbose else logging.INFO)
     match args.command:
         case "task":
             match args.task_command:
@@ -58,18 +60,28 @@ def inspect_task(data_dir: pathlib.Path, task_id: str) -> None:
 
 def dummy_exec_task(data_dir: pathlib.Path) -> None:
     def executor(task):
-        print("begin", task.id)
         time.sleep(random.random())
         if random.random() < 0.5:
-            print("fail", task.id)
             raise RuntimeError("oops")
-        print("success", task.id)
 
     with Client.new(data_dir, executor=executor):
         try:
             time.sleep(60 * 60)
         except KeyboardInterrupt:
             return
+
+
+def configure_logging(level: int):
+    logger = logging.getLogger()
+    logger.setLevel(level)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        "%(asctime)s.%(msecs)dZ [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    )
+    formatter.converter = time.gmtime
+    handler.formatter = formatter
+    logger.addHandler(handler)
 
 
 def parse_args() -> argparse.Namespace:
@@ -79,6 +91,11 @@ def parse_args() -> argparse.Namespace:
         "--data-dir",
         type=pathlib.Path,
         required=True,
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     task_parser = subparsers.add_parser("task")

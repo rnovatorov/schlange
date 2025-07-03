@@ -1,4 +1,5 @@
 import dataclasses
+import logging
 import os
 import pathlib
 from typing import Optional, Union
@@ -12,6 +13,8 @@ from .retry_policy import RetryPolicy
 from .task import Task
 from .task_args import TaskArgs
 from .task_executor import TaskExecutor
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
@@ -51,8 +54,8 @@ class Client:
         ),
         execution_worker_interval: float = 1,
         cleanup_policy: CleanupPolicy = CleanupPolicy(
-            delete_succeeded_after=60 * 60 * 24,
-            delete_failed_after=60 * 60 * 24 * 7,
+            delete_succeeded_after=60,
+            delete_failed_after=60,
         ),
         cleanup_worker_interval: float = 60,
     ) -> "Client":
@@ -88,7 +91,15 @@ class Client:
         delay: float = 0.0,
         retry_policy: Optional[RetryPolicy] = None,
     ) -> Task:
-        return self.queue.create_task(args=args, delay=delay, retry_policy=retry_policy)
+        LOGGER.debug(
+            "creating task: args=%s, delay=%f, retry_policy=%r",
+            args,
+            delay,
+            retry_policy,
+        )
+        task = self.queue.create_task(args=args, delay=delay, retry_policy=retry_policy)
+        LOGGER.info("task created: task=%r", task)
+        return task
 
-    def find_task(self, task_id: str) -> Optional[Task]:
+    def find_task(self, task_id: str) -> Task:
         return self.queue.find_task(task_id)

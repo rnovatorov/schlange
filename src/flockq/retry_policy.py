@@ -1,7 +1,7 @@
 import dataclasses
 from typing import Optional
 
-from .errors import TooManyAttempts
+from .errors import TooManyAttemptsError
 
 
 @dataclasses.dataclass
@@ -18,7 +18,7 @@ class RetryPolicy:
         if attempts == 1:
             return self.initial_delay
         if self.max_attempts <= attempts:
-            raise TooManyAttempts()
+            raise TooManyAttemptsError()
         delay = self.delay(attempts - 1) * self.backoff_factor
         return delay if self.max_delay is None else min(delay, self.max_delay)
 

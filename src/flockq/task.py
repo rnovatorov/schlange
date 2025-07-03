@@ -2,7 +2,7 @@ import datetime
 from typing import List, Optional
 
 from .aggregate import Aggregate
-from .errors import TaskNotActive, TaskNotReady, TooManyAttempts
+from .errors import TaskNotActiveError, TaskNotReadyError, TooManyAttemptsError
 from .retry_policy import RetryPolicy
 from .task_args import TaskArgs
 from .task_events import (
@@ -69,9 +69,9 @@ class Task(Aggregate[TaskEvent, TaskProjection]):
 
     def begin_execution(self, now: datetime.datetime) -> None:
         if self.state is not TaskState.ACTIVE:
-            raise TaskNotActive()
+            raise TaskNotActiveError()
         if not self.ready_at <= now:
-            raise TaskNotReady()
+            raise TaskNotReadyError()
         assert self.last_execution is None or self.last_execution.ended
         self._emit(TaskExecutionBegun(timestamp=now))
 
@@ -85,7 +85,7 @@ class Task(Aggregate[TaskEvent, TaskProjection]):
             return
         try:
             delay = self.retry_policy.delay(attempts=len(self.executions))
-        except TooManyAttempts:
+        except TooManyAttemptsError:
             self._emit(TaskFailed(timestamp=now))
             return
         self._emit(TaskDelayed(timestamp=now, delay=delay))
