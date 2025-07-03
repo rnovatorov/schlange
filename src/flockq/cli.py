@@ -38,10 +38,11 @@ def cli():
 
 
 def create_task(data_dir: pathlib.Path, args_file: BinaryIO, delay: float) -> None:
-    args = json.load(args_file)
-    client = Client.new(data_dir, executor=None)
-    task = client.create_task(args, delay=delay)
-    print(task.id)
+    for line in args_file:
+        args = json.loads(line)
+        client = Client.new(data_dir, executor=None)
+        task = client.create_task(args, delay=delay)
+        print(task.id)
 
 
 def inspect_task(data_dir: pathlib.Path, task_id: str) -> None:
