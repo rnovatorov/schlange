@@ -47,7 +47,11 @@ class FileSystemTaskRepository:
             if not path.name.endswith(".json"):
                 continue
             (task_id, _) = path.name.split(".")
-            with path.open("rb") as file:
+            try:
+                file = path.open("rb")
+            except FileNotFoundError:
+                continue
+            with file:
                 change_log = self._read_change_log(file)
                 task = Task.rehydrate(id=task_id, events=change_log)
                 if spec.is_satisfied_by(task):
