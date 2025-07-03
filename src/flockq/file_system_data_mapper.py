@@ -2,9 +2,15 @@ import datetime
 from typing import Any, Dict, List
 
 from .retry_policy import RetryPolicy
-from .task_events import (TaskCreated, TaskDelayed, TaskEvent,
-                          TaskExecutionBegun, TaskExecutionEnded, TaskFailed,
-                          TaskSucceeded)
+from .task_events import (
+    TaskCreated,
+    TaskDelayed,
+    TaskEvent,
+    TaskExecutionBegun,
+    TaskExecutionEnded,
+    TaskFailed,
+    TaskSucceeded,
+)
 
 
 class FileSystemDataMapper:

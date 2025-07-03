@@ -17,4 +17,4 @@ jobs:
           python-version: '3.13'
           cache: 'pipenv'
       - run: make .ci-setup-env
-      - run: pipenv run mypy .
+      - run: make lint

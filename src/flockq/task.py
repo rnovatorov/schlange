@@ -5,9 +5,15 @@ from .aggregate import Aggregate
 from .errors import TaskNotActive, TaskNotReady, TooManyAttempts
 from .retry_policy import RetryPolicy
 from .task_args import TaskArgs
-from .task_events import (TaskCreated, TaskDelayed, TaskEvent,
-                          TaskExecutionBegun, TaskExecutionEnded, TaskFailed,
-                          TaskSucceeded)
+from .task_events import (
+    TaskCreated,
+    TaskDelayed,
+    TaskEvent,
+    TaskExecutionBegun,
+    TaskExecutionEnded,
+    TaskFailed,
+    TaskSucceeded,
+)
 from .task_execution import TaskExecution
 from .task_projection import TaskProjection
 from .task_state import TaskState

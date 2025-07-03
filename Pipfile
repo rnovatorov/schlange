@@ -9,3 +9,5 @@ flockq = {file = ".", editable = true}
 [dev-packages]
 types-setuptools = "*"
 mypy = "*"
+black = "*"
+isort = "*"
