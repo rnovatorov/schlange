@@ -90,5 +90,5 @@ class Client:
     ) -> Task:
         return self.queue.create_task(args=args, delay=delay, retry_policy=retry_policy)
 
-    def find_task(self, task_id: str) -> Task:
+    def find_task(self, task_id: str) -> Optional[Task]:
         return self.queue.find_task(task_id)

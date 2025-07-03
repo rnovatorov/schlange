@@ -152,7 +152,7 @@ class FileSystemDataMapper:
             initial_delay=dto["initial_delay"],
             backoff_factor=dto["backoff_factor"],
             max_delay=dto.get("max_delay"),
-            max_attempts=dto.get("max_attempts"),
+            max_attempts=dto["max_attempts"],
         )
 
     @staticmethod
