@@ -8,9 +8,9 @@ from .errors import (
     TaskNotFoundError,
     TaskNotReadyError,
 )
-from .queue import Queue
 from .task import Task
 from .task_executor import TaskExecutor
+from .task_service import TaskService
 from .worker import Worker
 
 LOGGER = logging.getLogger(__name__)
@@ -21,12 +21,12 @@ class ExecutionWorker(Worker):
     def __init__(
         self,
         interval: float,
-        queue: Queue,
+        task_service: TaskService,
         executor: TaskExecutor,
         processes: Optional[int] = None,
     ) -> None:
         super().__init__(name="flockq.ExecutionWorker", interval=interval)
-        self.queue = queue
+        self.task_service = task_service
         self.executor = executor
         self.thread_pool: Optional[multiprocessing.pool.ThreadPool] = None
         self.processes = processes
@@ -46,7 +46,7 @@ class ExecutionWorker(Worker):
         assert self.thread_pool is not None
         progress_made = True
         while progress_made:
-            tasks = self.queue.find_executable_tasks()
+            tasks = self.task_service.executable_tasks()
             try:
                 results = self.thread_pool.map(self._execute_task, tasks)
             except ValueError:
@@ -58,7 +58,7 @@ class ExecutionWorker(Worker):
     def _execute_task(self, task: Task) -> bool:
         try:
             LOGGER.debug("executing task: id=%s", task.id)
-            task = self.queue.execute_task(task.id, executor=self.executor)
+            task = self.task_service.execute_task(task.id, executor=self.executor)
             assert task.last_execution is not None
             assert task.last_execution.duration is not None
             LOGGER.info(

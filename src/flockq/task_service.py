@@ -14,17 +14,12 @@ from .task_specification import TaskIsDeletable, TaskIsExecutable
 
 
 @dataclasses.dataclass
-class Queue:
+class TaskService:
 
     task_repository: TaskRepository
-    retry_policy: RetryPolicy
-    cleanup_policy: CleanupPolicy
 
     def create_task(
-        self,
-        args: TaskArgs,
-        delay: float,
-        retry_policy: Optional[RetryPolicy] = None,
+        self, args: TaskArgs, delay: float, retry_policy: RetryPolicy
     ) -> Task:
         """
         Raises:
@@ -35,14 +30,12 @@ class Queue:
             id=str(uuid.uuid4()),
             args=args,
             delay=delay,
-            retry_policy=(
-                retry_policy if retry_policy is not None else self.retry_policy
-            ),
+            retry_policy=retry_policy,
         )
         self.task_repository.add_task(task)
         return task
 
-    def find_task(self, task_id: str) -> Task:
+    def task(self, task_id: str) -> Task:
         """
         Raises:
             IOError: IO error occurred during the operation.
@@ -50,9 +43,9 @@ class Queue:
         """
         return self.task_repository.get_task(task_id)
 
-    def find_deletable_tasks(self) -> Generator[Task]:
+    def deletable_tasks(self, cleanup_policy: CleanupPolicy) -> Generator[Task]:
         return self.task_repository.list_tasks(
-            spec=TaskIsDeletable(self._now(), self.cleanup_policy)
+            spec=TaskIsDeletable(self._now(), cleanup_policy)
         )
 
     def delete_task(self, task_id: str) -> None:
@@ -63,7 +56,7 @@ class Queue:
         """
         self.task_repository.delete_task(task_id)
 
-    def find_executable_tasks(self) -> Generator[Task]:
+    def executable_tasks(self) -> Generator[Task]:
         """
         Raises:
             IOError: IO error occurred during the operation.

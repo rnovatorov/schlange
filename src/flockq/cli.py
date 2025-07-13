@@ -7,7 +7,7 @@ import sys
 import time
 from typing import BinaryIO
 
-from .client import Client
+from .flockq import Flockq
 
 
 def cli():
@@ -40,14 +40,14 @@ def cli():
 def create_task(data_dir: pathlib.Path, args_file: BinaryIO, delay: float) -> None:
     for line in args_file:
         args = json.loads(line)
-        client = Client.new(data_dir, executor=None)
+        client = Flockq.new(data_dir, executor=None)
         task = client.create_task(args, delay=delay)
         print(task.id)
 
 
 def inspect_task(data_dir: pathlib.Path, task_id: str) -> None:
-    client = Client.new(data_dir, executor=None)
-    task = client.find_task(task_id)
+    q = Flockq.new(data_dir, executor=None)
+    task = q.task(task_id)
     if task is None:
         print("not found")
         exit(1)
@@ -65,7 +65,7 @@ def dummy_exec_task(data_dir: pathlib.Path) -> None:
         if random.random() < 0.5:
             raise RuntimeError("oops")
 
-    with Client.new(data_dir, executor=executor):
+    with Flockq.new(data_dir, executor=executor):
         try:
             time.sleep(60 * 60)
         except KeyboardInterrupt:

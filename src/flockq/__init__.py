@@ -1,7 +1,7 @@
 import logging
 
 from .cleanup_policy import CleanupPolicy
-from .client import Client
+from .flockq import Flockq
 from .retry_policy import RetryPolicy
 from .task import Task
 from .task_args import TaskArgs
@@ -12,7 +12,7 @@ logging.getLogger(__name__).handlers = [logging.NullHandler()]
 
 __all__ = [
     "CleanupPolicy",
-    "Client",
+    "Flockq",
     "RetryPolicy",
     "Task",
     "TaskArgs",
