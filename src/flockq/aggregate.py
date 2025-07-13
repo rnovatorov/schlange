@@ -1,5 +1,5 @@
 import abc
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 
 class Aggregate[EventType, ProjectionType](abc.ABC):
@@ -10,7 +10,7 @@ class Aggregate[EventType, ProjectionType](abc.ABC):
         self._projection: Optional[ProjectionType] = None
 
     @classmethod
-    def rehydrate(cls, id: str, events: List[EventType]):
+    def rehydrate(cls, id: str, events: Iterable[EventType]):
         agg = cls(id=id)
         for event in events:
             agg._apply(event)

@@ -1,6 +1,7 @@
 import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict
 
+from .file_system_task_journal_record import FileSystemTaskJournalRecord
 from .retry_policy import RetryPolicy
 from .task_events import (
     TaskCreated,
@@ -16,12 +17,20 @@ from .task_events import (
 class FileSystemDataMapper:
 
     @staticmethod
-    def dump_task_events(events: List[TaskEvent]) -> List[Dict[str, Any]]:
-        return [FileSystemDataMapper.dump_task_event(event) for event in events]
+    def dump_task_journal_record(record: FileSystemTaskJournalRecord) -> Dict[str, Any]:
+        return {
+            "events": [
+                FileSystemDataMapper.dump_task_event(event) for event in record.events
+            ]
+        }
 
     @staticmethod
-    def load_task_events(dto: List[Dict[str, Any]]) -> List[TaskEvent]:
-        return [FileSystemDataMapper.load_task_event(event) for event in dto]
+    def load_task_journal_record(dto: Dict[str, Any]) -> FileSystemTaskJournalRecord:
+        return FileSystemTaskJournalRecord(
+            events=[
+                FileSystemDataMapper.load_task_event(event) for event in dto["events"]
+            ]
+        )
 
     @staticmethod
     def dump_task_event(event: TaskEvent) -> Dict[str, Any]:
