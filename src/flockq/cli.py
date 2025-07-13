@@ -8,6 +8,7 @@ import time
 from typing import BinaryIO
 
 from .flockq import Flockq
+from .task_handler import TaskHandler
 
 
 def cli():
@@ -40,13 +41,13 @@ def cli():
 def create_task(data_dir: pathlib.Path, args_file: BinaryIO, delay: float) -> None:
     for line in args_file:
         args = json.loads(line)
-        client = Flockq.new(data_dir, executor=None)
+        client = Flockq.new(data_dir, task_handler=None)
         task = client.create_task(args, delay=delay)
         print(task.id)
 
 
 def inspect_task(data_dir: pathlib.Path, task_id: str) -> None:
-    q = Flockq.new(data_dir, executor=None)
+    q = Flockq.new(data_dir, task_handler=None)
     task = q.task(task_id)
     if task is None:
         print("not found")
@@ -60,12 +61,13 @@ def inspect_task(data_dir: pathlib.Path, task_id: str) -> None:
 
 
 def dummy_exec_task(data_dir: pathlib.Path) -> None:
-    def executor(task):
-        time.sleep(random.random())
-        if random.random() < 0.5:
-            raise RuntimeError("oops")
+    class Handler(TaskHandler):
+        def handle_task(self, task):
+            time.sleep(random.random())
+            if random.random() < 0.5:
+                raise RuntimeError("oops")
 
-    with Flockq.new(data_dir, executor=executor):
+    with Flockq.new(data_dir, task_handler=Handler()):
         try:
             time.sleep(60 * 60)
         except KeyboardInterrupt:

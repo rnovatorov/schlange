@@ -8,7 +8,7 @@ from .cleanup_policy import CleanupPolicy
 from .retry_policy import RetryPolicy
 from .task import Task
 from .task_args import TaskArgs
-from .task_executor import TaskExecutor
+from .task_handler import TaskHandler
 from .task_repository import TaskRepository
 from .task_specification import TaskIsDeletable, TaskIsExecutable
 
@@ -63,7 +63,7 @@ class TaskService:
         """
         return self.task_repository.list_tasks(spec=TaskIsExecutable(self._now()))
 
-    def execute_task(self, task_id: str, executor: TaskExecutor) -> Task:
+    def execute_task(self, task_id: str, task_handler: TaskHandler) -> Task:
         """
         Raises:
             IOError: IO error occurred during the operation.
@@ -76,7 +76,7 @@ class TaskService:
             task.begin_execution(now=self._now())
             error: Optional[str] = None
             try:
-                executor(task)
+                task_handler.handle_task(task)
             except Exception:
                 error = traceback.format_exc()
             task.end_execution(now=self._now(), error=error)

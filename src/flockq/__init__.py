@@ -6,6 +6,7 @@ from .retry_policy import RetryPolicy
 from .task import Task
 from .task_args import TaskArgs
 from .task_execution import TaskExecution
+from .task_handler import TaskHandler
 from .task_state import TaskState
 
 logging.getLogger(__name__).handlers = [logging.NullHandler()]
@@ -17,5 +18,6 @@ __all__ = [
     "Task",
     "TaskArgs",
     "TaskExecution",
+    "TaskHandler",
     "TaskState",
 ]

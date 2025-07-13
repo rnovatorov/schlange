@@ -11,7 +11,7 @@ from .file_system_task_repository import FileSystemTaskRepository
 from .retry_policy import RetryPolicy
 from .task import Task
 from .task_args import TaskArgs
-from .task_executor import TaskExecutor
+from .task_handler import TaskHandler
 from .task_service import TaskService
 
 LOGGER = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class Flockq:
     def new(
         cls,
         data_dir_path: Union[str, pathlib.Path],
-        executor: Optional[TaskExecutor],
+        task_handler: Optional[TaskHandler],
         retry_policy: RetryPolicy = DEFAULT_RETRY_POLICY,
         execution_worker_pool_interval: float = DEFAULT_EXECUTION_WORKER_POOL_INTERVAL,
         execution_worker_pool_capacity: int = DEFAULT_EXECUTION_WORKER_POOL_CAPACITY,
@@ -81,10 +81,10 @@ class Flockq:
             ExecutionWorkerPool(
                 interval=execution_worker_pool_interval,
                 task_service=task_service,
-                executor=executor,
+                task_handler=task_handler,
                 capacity=execution_worker_pool_capacity,
             )
-            if executor is not None
+            if task_handler is not None
             else None
         )
         cleanup_worker = CleanupWorker(

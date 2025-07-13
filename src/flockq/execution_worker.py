@@ -1,5 +1,4 @@
 import logging
-import os
 import queue
 
 from .errors import (
@@ -9,7 +8,7 @@ from .errors import (
     TaskNotReadyError,
 )
 from .task import Task
-from .task_executor import TaskExecutor
+from .task_handler import TaskHandler
 from .task_service import TaskService
 from .worker import Worker
 
@@ -22,7 +21,7 @@ class ExecutionWorkerPool(Worker):
         self,
         interval: float,
         task_service: TaskService,
-        executor: TaskExecutor,
+        task_handler: TaskHandler,
         capacity: int,
     ) -> None:
         super().__init__(name="flockq.ExecutionWorkerPool", interval=interval)
@@ -30,12 +29,12 @@ class ExecutionWorkerPool(Worker):
         self.queue: queue.Queue = queue.Queue(maxsize=capacity)
         self.workers = [
             ExecutionWorker(
-                id=id,
+                id=worker_id,
                 task_service=self.task_service,
-                executor=executor,
+                task_handler=task_handler,
                 queue=self.queue,
             )
-            for id in range(capacity)
+            for worker_id in range(capacity)
         ]
 
     def start(self) -> None:
@@ -56,6 +55,7 @@ class ExecutionWorkerPool(Worker):
             progress_made = False
             for task in self.task_service.executable_tasks():
                 try:
+                    # FIXME: No waiting for completion.
                     self.queue.put(task)
                     progress_made = True
                 except queue.ShutDown:
@@ -68,12 +68,12 @@ class ExecutionWorker(Worker):
         self,
         id: int,
         task_service: TaskService,
-        executor: TaskExecutor,
+        task_handler: TaskHandler,
         queue: queue.Queue,
     ) -> None:
         super().__init__(name=f"flockq.ExecutionWorker-{id}", interval=1)
         self.task_service = task_service
-        self.executor = executor
+        self.task_handler = task_handler
         self.queue = queue
 
     def work(self) -> None:
@@ -88,7 +88,9 @@ class ExecutionWorker(Worker):
     def _execute_task(self, task: Task) -> None:
         try:
             LOGGER.debug("executing task: id=%s", task.id)
-            task = self.task_service.execute_task(task.id, executor=self.executor)
+            task = self.task_service.execute_task(
+                task.id, task_handler=self.task_handler
+            )
             assert task.last_execution is not None
             assert task.last_execution.duration is not None
             LOGGER.info(
