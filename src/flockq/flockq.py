@@ -6,7 +6,7 @@ from typing import Optional, Union
 
 from .cleanup_policy import CleanupPolicy
 from .cleanup_worker import CleanupWorker
-from .execution_worker import ExecutionWorkerPool
+from .execution_worker_pool import ExecutionWorkerPool
 from .file_system_task_repository import FileSystemTaskRepository
 from .retry_policy import RetryPolicy
 from .task import Task
