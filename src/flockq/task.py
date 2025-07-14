@@ -26,6 +26,7 @@ class Task(Aggregate[TaskEvent, TaskProjection]):
         cls,
         now: datetime.datetime,
         id: str,
+        kind: str,
         args: TaskArgs,
         delay: float,
         retry_policy: RetryPolicy,
@@ -33,10 +34,19 @@ class Task(Aggregate[TaskEvent, TaskProjection]):
         task = cls(id=id)
         task._emit(
             TaskCreated(
-                timestamp=now, args=args, delay=delay, retry_policy=retry_policy
+                timestamp=now,
+                kind=kind,
+                args=args,
+                delay=delay,
+                retry_policy=retry_policy,
             )
         )
         return task
+
+    @property
+    def kind(self) -> str:
+        assert self._projection is not None
+        return self._projection.kind
 
     @property
     def args(self) -> TaskArgs:
@@ -110,6 +120,7 @@ class Task(Aggregate[TaskEvent, TaskProjection]):
         assert self._projection is None
         self._projection = TaskProjection(
             created_at=event.timestamp,
+            kind=event.kind,
             args=event.args,
             state=TaskState.ACTIVE,
             ready_at=event.timestamp + datetime.timedelta(seconds=event.delay),

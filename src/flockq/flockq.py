@@ -12,6 +12,7 @@ from .retry_policy import RetryPolicy
 from .task import Task
 from .task_args import TaskArgs
 from .task_handler import TaskHandler
+from .task_handler_registry import TaskHandlerRegistry
 from .task_service import TaskService
 
 LOGGER = logging.getLogger(__name__)
@@ -32,13 +33,15 @@ DEFAULT_CLEANUP_POLICY = CleanupPolicy(
 )
 DEFAULT_CLEANUP_WORKER_INTERVAL = 60
 
+DEFAULT_TASK_HANDLER_REGISTRY = TaskHandlerRegistry()
+
 
 @dataclasses.dataclass
 class Flockq:
 
     task_service: TaskService
     retry_policy: RetryPolicy
-    execution_worker: Optional[ExecutionWorker]
+    execution_worker: ExecutionWorker
     cleanup_worker: CleanupWorker
 
     def __enter__(self) -> "Flockq":
@@ -49,20 +52,18 @@ class Flockq:
         self.stop()
 
     def start(self) -> None:
-        if self.execution_worker is not None:
-            self.execution_worker.start()
+        self.execution_worker.start()
         self.cleanup_worker.start()
 
     def stop(self) -> None:
         self.cleanup_worker.stop()
-        if self.execution_worker is not None:
-            self.execution_worker.stop()
+        self.execution_worker.stop()
 
     @classmethod
     def new(
         cls,
         data_dir_path: Union[str, pathlib.Path],
-        task_handler: Optional[TaskHandler],
+        task_handler_registry: TaskHandlerRegistry = DEFAULT_TASK_HANDLER_REGISTRY,
         retry_policy: RetryPolicy = DEFAULT_RETRY_POLICY,
         execution_worker_interval: float = DEFAULT_EXECUTION_WORKER_INTERVAL,
         execution_worker_processes: int = DEFAULT_EXECUTION_WORKER_PROCESSES,
@@ -76,16 +77,13 @@ class Flockq:
         except FileExistsError:
             pass
         task_repository = FileSystemTaskRepository(data_dir_path=data_dir_path)
-        task_service = TaskService(task_repository=task_repository)
-        execution_worker = (
-            ExecutionWorker(
-                interval=execution_worker_interval,
-                task_service=task_service,
-                task_handler=task_handler,
-                processes=execution_worker_processes,
-            )
-            if task_handler is not None
-            else None
+        task_service = TaskService(
+            task_repository=task_repository, task_handler_registry=task_handler_registry
+        )
+        execution_worker = ExecutionWorker(
+            interval=execution_worker_interval,
+            task_service=task_service,
+            processes=execution_worker_processes,
         )
         cleanup_worker = CleanupWorker(
             interval=cleanup_worker_interval,
@@ -99,8 +97,12 @@ class Flockq:
             cleanup_worker=cleanup_worker,
         )
 
+    def register_task_handler(self, task_handler: TaskHandler) -> None:
+        self.task_service.register_task_handler(task_handler)
+
     def create_task(
         self,
+        kind: str,
         args: TaskArgs,
         delay: float = 0.0,
         retry_policy: Optional[RetryPolicy] = None,
@@ -108,13 +110,14 @@ class Flockq:
         if retry_policy is None:
             retry_policy = self.retry_policy
         LOGGER.debug(
-            "creating task: args=%s, delay=%f, retry_policy=%r",
+            "creating task: kind=%s, args=%s, delay=%f, retry_policy=%r",
+            kind,
             args,
             delay,
             retry_policy,
         )
         task = self.task_service.create_task(
-            args=args, delay=delay, retry_policy=retry_policy
+            kind=kind, args=args, delay=delay, retry_policy=retry_policy
         )
         LOGGER.info("task created: task=%r", task)
         return task

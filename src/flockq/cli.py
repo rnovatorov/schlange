@@ -20,6 +20,7 @@ def cli():
                 case "create":
                     create_task(
                         data_dir=args.data_dir,
+                        task_kind=args.kind,
                         args_file=args.args_file,
                         delay=args.delay,
                     )
@@ -31,6 +32,7 @@ def cli():
                 case "dummy_exec":
                     dummy_exec_task(
                         data_dir=args.data_dir,
+                        task_kind=args.kind,
                     )
                 case _:
                     raise NotImplementedError(args.command)
@@ -38,16 +40,18 @@ def cli():
             raise NotImplementedError(args.command)
 
 
-def create_task(data_dir: pathlib.Path, args_file: BinaryIO, delay: float) -> None:
+def create_task(
+    data_dir: pathlib.Path, task_kind: str, args_file: BinaryIO, delay: float
+) -> None:
     for line in args_file:
         args = json.loads(line)
-        client = Flockq.new(data_dir, task_handler=None)
-        task = client.create_task(args, delay=delay)
+        q = Flockq.new(data_dir)
+        task = q.create_task(task_kind, args, delay=delay)
         print(task.id)
 
 
 def inspect_task(data_dir: pathlib.Path, task_id: str) -> None:
-    q = Flockq.new(data_dir, task_handler=None)
+    q = Flockq.new(data_dir)
     task = q.task(task_id)
     if task is None:
         print("not found")
@@ -60,14 +64,20 @@ def inspect_task(data_dir: pathlib.Path, task_id: str) -> None:
     print(f"retry_policy: {task.retry_policy}")
 
 
-def dummy_exec_task(data_dir: pathlib.Path) -> None:
+def dummy_exec_task(data_dir: pathlib.Path, task_kind: str) -> None:
     class Handler(TaskHandler):
+
+        @staticmethod
+        def task_kind() -> str:
+            return task_kind
+
         def handle_task(self, task):
             time.sleep(random.random())
             if random.random() < 0.5:
                 raise RuntimeError("oops")
 
-    with Flockq.new(data_dir, task_handler=Handler()):
+    with Flockq.new(data_dir) as fq:
+        fq.register_task_handler(Handler())
         try:
             time.sleep(60 * 60)
         except KeyboardInterrupt:
@@ -105,6 +115,11 @@ def parse_args() -> argparse.Namespace:
     task_subparsers = task_parser.add_subparsers(dest="task_command", required=True)
     task_create_parser = task_subparsers.add_parser("create")
     task_create_parser.add_argument(
+        "--kind",
+        type=str,
+        required=True,
+    )
+    task_create_parser.add_argument(
         "--delay",
         type=float,
         default=0,
@@ -120,5 +135,10 @@ def parse_args() -> argparse.Namespace:
         "task_id",
         type=str,
     )
-    task_subparsers.add_parser("dummy_exec")
+    task_dummy_exec_parser = task_subparsers.add_parser("dummy_exec")
+    task_dummy_exec_parser.add_argument(
+        "--kind",
+        type=str,
+        required=True,
+    )
     return parser.parse_args()

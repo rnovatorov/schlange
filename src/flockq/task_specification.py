@@ -1,4 +1,5 @@
 import datetime
+from typing import Set
 
 from .cleanup_policy import CleanupPolicy
 from .specification import Specification
@@ -17,6 +18,15 @@ class TaskIsInState(TaskSpecification):
 
     def is_satisfied_by(self, task: Task) -> bool:
         return task.state == self.state
+
+
+class TaskKindIsInSet(TaskSpecification):
+
+    def __init__(self, task_kinds: Set[str]) -> None:
+        self.task_kinds = task_kinds
+
+    def is_satisfied_by(self, task: Task) -> bool:
+        return task.kind in self.task_kinds
 
 
 class TaskIsReady(TaskSpecification):
@@ -43,12 +53,15 @@ class LastTaskExecutionHasEndedBefore(TaskSpecification):
 
 class TaskIsExecutable(TaskSpecification):
 
-    def __init__(self, now: datetime.datetime) -> None:
+    def __init__(self, now: datetime.datetime, task_kinds: Set[str]) -> None:
         self.now = now
+        self.task_kinds = task_kinds
 
     def is_satisfied_by(self, task: Task) -> bool:
         return (
-            TaskIsInState(TaskState.ACTIVE) & TaskIsReady(self.now)
+            TaskIsInState(TaskState.ACTIVE)
+            & TaskIsReady(self.now)
+            & TaskKindIsInSet(self.task_kinds)
         ).is_satisfied_by(task)
 
 

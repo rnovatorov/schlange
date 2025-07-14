@@ -12,6 +12,7 @@ from .task_state import TaskState
 class TaskProjection:
 
     created_at: datetime.datetime
+    kind: str
     args: TaskArgs
     state: TaskState
     ready_at: datetime.datetime

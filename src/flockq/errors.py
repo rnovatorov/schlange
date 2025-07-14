@@ -20,3 +20,7 @@ class TaskNotActiveError(Error):
 
 class TaskNotReadyError(Error):
     pass
+
+
+class TaskHandlerNotFound(Error):
+    pass

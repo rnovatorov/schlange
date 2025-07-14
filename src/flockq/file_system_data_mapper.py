@@ -74,6 +74,7 @@ class FileSystemDataMapper:
     def dump_task_created(event: TaskCreated) -> Dict[str, Any]:
         return {
             "timestamp": FileSystemDataMapper.dump_timestamp(event.timestamp),
+            "kind": event.kind,
             "args": event.args,
             "delay": event.delay,
             "retry_policy": FileSystemDataMapper.dump_retry_policy(event.retry_policy),
@@ -83,6 +84,7 @@ class FileSystemDataMapper:
     def load_task_created(dto: Dict[str, Any]) -> TaskCreated:
         return TaskCreated(
             timestamp=FileSystemDataMapper.load_timestamp(dto["timestamp"]),
+            kind=dto["kind"],
             args=dto["args"],
             delay=dto["delay"],
             retry_policy=FileSystemDataMapper.load_retry_policy(dto["retry_policy"]),

@@ -13,6 +13,7 @@ class TaskEvent(Event):
 @dataclasses.dataclass
 class TaskCreated(TaskEvent):
 
+    kind: str
     args: TaskArgs
     delay: float
     retry_policy: RetryPolicy
