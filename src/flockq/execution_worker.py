@@ -1,5 +1,6 @@
+import concurrent.futures
 import logging
-import queue
+import threading
 
 from .errors import (
     TaskLockedError,
@@ -19,24 +20,29 @@ class ExecutionWorker(Worker):
 
     def __init__(
         self,
-        id: int,
+        interval: float,
         task_service: TaskService,
         task_handler: TaskHandler,
-        queue: queue.Queue,
+        processes: int,
     ) -> None:
-        super().__init__(name=f"flockq.ExecutionWorker-{id}", interval=1)
+        super().__init__(name="flockq.ExecutionWorker", interval=interval)
         self.task_service = task_service
         self.task_handler = task_handler
-        self.queue = queue
+        self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=processes)
+        self.semaphore = threading.BoundedSemaphore(processes)
+
+    def stop(self) -> None:
+        self.thread_pool.shutdown(wait=True, cancel_futures=True)
+        super().stop()
 
     def work(self) -> None:
-        while True:
+        for task in self.task_service.executable_tasks():
+            self.semaphore.acquire()
             try:
-                task = self.queue.get()
-            except queue.ShutDown:
+                future = self.thread_pool.submit(self._execute_task, task)
+            except RuntimeError:
                 return
-            self._execute_task(task)
-            self.queue.task_done()
+            future.add_done_callback(lambda _: self.semaphore.release())
 
     def _execute_task(self, task: Task) -> None:
         try:

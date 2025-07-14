@@ -6,7 +6,7 @@ from typing import Optional, Union
 
 from .cleanup_policy import CleanupPolicy
 from .cleanup_worker import CleanupWorker
-from .execution_worker_pool import ExecutionWorkerPool
+from .execution_worker import ExecutionWorker
 from .file_system_task_repository import FileSystemTaskRepository
 from .retry_policy import RetryPolicy
 from .task import Task
@@ -23,8 +23,8 @@ DEFAULT_RETRY_POLICY = RetryPolicy(
     max_attempts=20,
 )
 
-DEFAULT_EXECUTION_WORKER_POOL_INTERVAL = 1
-DEFAULT_EXECUTION_WORKER_POOL_CAPACITY = os.cpu_count() or 4
+DEFAULT_EXECUTION_WORKER_INTERVAL = 1
+DEFAULT_EXECUTION_WORKER_PROCESSES = os.cpu_count() or 4
 
 DEFAULT_CLEANUP_POLICY = CleanupPolicy(
     delete_succeeded_after=60 * 60 * 24,
@@ -38,7 +38,7 @@ class Flockq:
 
     task_service: TaskService
     retry_policy: RetryPolicy
-    execution_worker_pool: Optional[ExecutionWorkerPool]
+    execution_worker: Optional[ExecutionWorker]
     cleanup_worker: CleanupWorker
 
     def __enter__(self) -> "Flockq":
@@ -49,14 +49,14 @@ class Flockq:
         self.stop()
 
     def start(self) -> None:
-        if self.execution_worker_pool is not None:
-            self.execution_worker_pool.start()
+        if self.execution_worker is not None:
+            self.execution_worker.start()
         self.cleanup_worker.start()
 
     def stop(self) -> None:
         self.cleanup_worker.stop()
-        if self.execution_worker_pool is not None:
-            self.execution_worker_pool.stop()
+        if self.execution_worker is not None:
+            self.execution_worker.stop()
 
     @classmethod
     def new(
@@ -64,8 +64,8 @@ class Flockq:
         data_dir_path: Union[str, pathlib.Path],
         task_handler: Optional[TaskHandler],
         retry_policy: RetryPolicy = DEFAULT_RETRY_POLICY,
-        execution_worker_pool_interval: float = DEFAULT_EXECUTION_WORKER_POOL_INTERVAL,
-        execution_worker_pool_capacity: int = DEFAULT_EXECUTION_WORKER_POOL_CAPACITY,
+        execution_worker_interval: float = DEFAULT_EXECUTION_WORKER_INTERVAL,
+        execution_worker_processes: int = DEFAULT_EXECUTION_WORKER_PROCESSES,
         cleanup_policy: CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
     ) -> "Flockq":
@@ -77,12 +77,12 @@ class Flockq:
             pass
         task_repository = FileSystemTaskRepository(data_dir_path=data_dir_path)
         task_service = TaskService(task_repository=task_repository)
-        execution_worker_pool = (
-            ExecutionWorkerPool(
-                interval=execution_worker_pool_interval,
+        execution_worker = (
+            ExecutionWorker(
+                interval=execution_worker_interval,
                 task_service=task_service,
                 task_handler=task_handler,
-                capacity=execution_worker_pool_capacity,
+                processes=execution_worker_processes,
             )
             if task_handler is not None
             else None
@@ -95,7 +95,7 @@ class Flockq:
         return cls(
             task_service=task_service,
             retry_policy=retry_policy,
-            execution_worker_pool=execution_worker_pool,
+            execution_worker=execution_worker,
             cleanup_worker=cleanup_worker,
         )
 
