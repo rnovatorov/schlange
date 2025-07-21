@@ -21,8 +21,8 @@ class TaskService:
     task_repository: TaskRepository
     task_handler_registry: TaskHandlerRegistry
 
-    def register_task_handler(self, task_handler: TaskHandler) -> None:
-        self.task_handler_registry.register_task_handler(task_handler)
+    def register_task_handler(self, task_kind: str, task_handler: TaskHandler) -> None:
+        self.task_handler_registry.register_task_handler(task_kind, task_handler)
 
     def create_task(
         self, kind: str, args: TaskArgs, delay: float, retry_policy: RetryPolicy
@@ -90,7 +90,7 @@ class TaskService:
             task.begin_execution(now=self._now())
             error: Optional[str] = None
             try:
-                task_handler.handle_task(task)
+                task_handler(task)
             except Exception:
                 error = traceback.format_exc()
             task.end_execution(now=self._now(), error=error)

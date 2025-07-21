@@ -2,7 +2,7 @@ import dataclasses
 import logging
 import os
 import pathlib
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 from .cleanup_policy import CleanupPolicy
 from .cleanup_worker import CleanupWorker
@@ -97,8 +97,15 @@ class Flockq:
             cleanup_worker=cleanup_worker,
         )
 
-    def register_task_handler(self, task_handler: TaskHandler) -> None:
-        self.task_service.register_task_handler(task_handler)
+    def task_handler(self, task_kind: str) -> Callable[[TaskHandler], TaskHandler]:
+        def decorator(task_handler: TaskHandler) -> TaskHandler:
+            self.register_task_handler(task_kind, task_handler)
+            return task_handler
+
+        return decorator
+
+    def register_task_handler(self, task_kind: str, task_handler: TaskHandler) -> None:
+        self.task_service.register_task_handler(task_kind, task_handler)
 
     def create_task(
         self,

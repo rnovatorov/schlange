@@ -8,7 +8,7 @@ import time
 from typing import BinaryIO
 
 from .flockq import Flockq
-from .task_handler import TaskHandler
+from .task import Task
 
 
 def cli():
@@ -65,19 +65,13 @@ def inspect_task(data_dir: pathlib.Path, task_id: str) -> None:
 
 
 def dummy_exec_task(data_dir: pathlib.Path, task_kind: str) -> None:
-    class Handler(TaskHandler):
+    def handle_task(task: Task) -> None:
+        time.sleep(random.random())
+        if random.random() < 0.5:
+            raise RuntimeError("oops")
 
-        @staticmethod
-        def task_kind() -> str:
-            return task_kind
-
-        def handle_task(self, task):
-            time.sleep(random.random())
-            if random.random() < 0.5:
-                raise RuntimeError("oops")
-
-    with Flockq.new(data_dir) as fq:
-        fq.register_task_handler(Handler())
+    with Flockq.new(data_dir) as q:
+        q.register_task_handler(task_kind, handle_task)
         try:
             time.sleep(60 * 60)
         except KeyboardInterrupt:

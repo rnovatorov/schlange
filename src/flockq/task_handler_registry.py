@@ -10,9 +10,9 @@ class TaskHandlerRegistry:
         self.task_handlers: Dict[str, TaskHandler] = {}
         self.lock = threading.Lock()
 
-    def register_task_handler(self, task_handler: TaskHandler):
+    def register_task_handler(self, task_kind: str, task_handler: TaskHandler):
         with self.lock:
-            self.task_handlers[task_handler.task_kind()] = task_handler
+            self.task_handlers[task_kind] = task_handler
 
     def task_handler(self, task_kind: str) -> TaskHandler:
         with self.lock:
