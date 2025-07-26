@@ -55,7 +55,7 @@ class ExecutionWorker(Worker):
         except IOError as err:
             LOGGER.error("failed to execute task: id=%s, err=%r", task.id, err)
         except TaskHandlerNotFound as err:
-            LOGGER.warn("failed to execute task: id=%s, err=%r", task.id, err)
+            LOGGER.warning("failed to execute task: id=%s, err=%r", task.id, err)
         except (
             TaskNotActiveError,
             TaskNotReadyError,
