@@ -18,12 +18,35 @@ class CleanupWorker(Worker):
         self.cleanup_policy = cleanup_policy
 
     def work(self) -> None:
-        for task in self.task_service.deletable_tasks(self.cleanup_policy):
-            LOGGER.debug("deleting task: id=%s", task.id)
+        self.cleanup_succeeded_tasks()
+        self.cleanup_failed_tasks()
+
+    def cleanup_succeeded_tasks(self) -> None:
+        for task in self.task_service.deletable_succeeded_tasks(self.cleanup_policy):
+            LOGGER.debug("deleting succeeded task: id=%s", task.id)
             try:
-                self.task_service.delete_task(task.id)
-                LOGGER.info("deleted task: id=%s", task.id)
+                self.task_service.delete_succeeded_task(task.id)
+                LOGGER.info("deleted succeeded task: id=%s", task.id)
             except IOError as err:
-                LOGGER.error("failed to delete task: id=%s, err=%r", task.id, err)
+                LOGGER.error(
+                    "failed to delete succeeded task: id=%s, err=%r", task.id, err
+                )
             except TaskNotFoundError as err:
-                LOGGER.debug("failed to delete task: id=%s, err=%r", task.id, err)
+                LOGGER.debug(
+                    "failed to delete succeeded task: id=%s, err=%r", task.id, err
+                )
+
+    def cleanup_failed_tasks(self) -> None:
+        for task in self.task_service.deletable_failed_tasks(self.cleanup_policy):
+            LOGGER.debug("deleting failed task: id=%s", task.id)
+            try:
+                self.task_service.delete_failed_task(task.id)
+                LOGGER.info("deleted failed task: id=%s", task.id)
+            except IOError as err:
+                LOGGER.error(
+                    "failed to delete failed task: id=%s, err=%r", task.id, err
+                )
+            except TaskNotFoundError as err:
+                LOGGER.debug(
+                    "failed to delete failed task: id=%s, err=%r", task.id, err
+                )

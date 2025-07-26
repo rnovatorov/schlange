@@ -28,8 +28,8 @@ DEFAULT_EXECUTION_WORKER_INTERVAL = 1
 DEFAULT_EXECUTION_WORKER_PROCESSES = os.cpu_count() or 4
 
 DEFAULT_CLEANUP_POLICY = CleanupPolicy(
-    delete_succeeded_after=60 * 60 * 24,
-    delete_failed_after=60 * 60 * 24 * 7,
+    delete_succeeded_after=60,
+    delete_failed_after=60,
 )
 DEFAULT_CLEANUP_WORKER_INTERVAL = 60
 
@@ -70,13 +70,10 @@ class Flockq:
         cleanup_policy: CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
     ) -> "Flockq":
-        if isinstance(data_dir_path, str):
-            data_dir_path = pathlib.Path(data_dir_path)
-        try:
-            os.mkdir(data_dir_path)
-        except FileExistsError:
-            pass
-        task_repository = FileSystemTaskRepository(data_dir_path=data_dir_path)
+        task_repository = FileSystemTaskRepository(
+            data_dir_path=pathlib.Path(data_dir_path)
+        )
+        task_repository.make_dirs()
         task_service = TaskService(
             task_repository=task_repository, task_handler_registry=task_handler_registry
         )

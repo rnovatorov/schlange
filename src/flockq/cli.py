@@ -43,11 +43,10 @@ def cli():
 def create_task(
     data_dir: pathlib.Path, task_kind: str, args_file: BinaryIO, delay: float
 ) -> None:
+    q = Flockq.new(data_dir)
     for line in args_file:
         args = json.loads(line)
-        q = Flockq.new(data_dir)
-        task = q.create_task(task_kind, args, delay=delay)
-        print(task.id)
+        q.create_task(task_kind, args, delay=delay)
 
 
 def inspect_task(data_dir: pathlib.Path, task_id: str) -> None:

@@ -5,14 +5,15 @@ import uuid
 from typing import Generator, Optional
 
 from .cleanup_policy import CleanupPolicy
-from .errors import TaskHandlerNotFound
+from .errors import TaskHandlerNotFound, TaskNotFoundError
 from .retry_policy import RetryPolicy
 from .task import Task
 from .task_args import TaskArgs
 from .task_handler import TaskHandler
 from .task_handler_registry import TaskHandlerRegistry
 from .task_repository import TaskRepository
-from .task_specification import TaskIsDeletable, TaskIsExecutable
+from .task_specification import TaskSpecification
+from .task_state import TaskState
 
 
 @dataclasses.dataclass
@@ -48,20 +49,50 @@ class TaskService:
             IOError: IO error occurred during the operation.
             TaskNotFoundError: Task was not found.
         """
-        return self.task_repository.get_task(task_id)
+        for task_state in TaskState:
+            try:
+                return self.task_repository.get_task(task_state, task_id)
+            except TaskNotFoundError:
+                continue
+        raise TaskNotFoundError()
 
-    def deletable_tasks(self, cleanup_policy: CleanupPolicy) -> Generator[Task]:
+    def deletable_failed_tasks(self, cleanup_policy: CleanupPolicy) -> Generator[Task]:
+        """
+        Raises:
+            IOError: IO error occurred during the operation.
+        """
+        deadline = cleanup_policy.failed_deadline(self._now())
         return self.task_repository.list_tasks(
-            spec=TaskIsDeletable(self._now(), cleanup_policy)
+            TaskState.FAILED, TaskSpecification(last_execution_ended_before=deadline)
         )
 
-    def delete_task(self, task_id: str) -> None:
+    def deletable_succeeded_tasks(
+        self, cleanup_policy: CleanupPolicy
+    ) -> Generator[Task]:
+        """
+        Raises:
+            IOError: IO error occurred during the operation.
+        """
+        deadline = cleanup_policy.succeeded_deadline(self._now())
+        return self.task_repository.list_tasks(
+            TaskState.SUCCEEDED, TaskSpecification(last_execution_ended_before=deadline)
+        )
+
+    def delete_succeeded_task(self, task_id: str) -> None:
         """
         Raises:
             IOError: IO error occurred during the operation.
             TaskNotFoundError: Task was not found.
         """
-        self.task_repository.delete_task(task_id)
+        self.task_repository.delete_task(TaskState.SUCCEEDED, task_id)
+
+    def delete_failed_task(self, task_id: str) -> None:
+        """
+        Raises:
+            IOError: IO error occurred during the operation.
+            TaskNotFoundError: Task was not found.
+        """
+        self.task_repository.delete_task(TaskState.FAILED, task_id)
 
     def executable_tasks(self) -> Generator[Task]:
         """
@@ -69,7 +100,10 @@ class TaskService:
             IOError: IO error occurred during the operation.
         """
         return self.task_repository.list_tasks(
-            spec=TaskIsExecutable(self._now(), self.task_handler_registry.task_kinds())
+            TaskState.ACTIVE,
+            TaskSpecification(
+                ready_as_of=self._now(), kind_in=self.task_handler_registry.task_kinds()
+            ),
         )
 
     def execute_task(self, task_id: str) -> Task:
@@ -82,7 +116,7 @@ class TaskService:
             TaskNotFoundError: Task was not found.
             TaskHandlerNotFound: Task handler was not found.
         """
-        with self.task_repository.update_task(task_id) as task:
+        with self.task_repository.update_task(TaskState.ACTIVE, task_id) as task:
             try:
                 task_handler = self.task_handler_registry.task_handler(task.kind)
             except KeyError:
