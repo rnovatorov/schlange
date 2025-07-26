@@ -27,7 +27,7 @@ class ExecutionWorker(Worker):
         self.semaphore = threading.BoundedSemaphore(processes)
 
     def stop(self) -> None:
-        self.thread_pool.shutdown(wait=True, cancel_futures=True)
+        self.thread_pool.shutdown(wait=True)
         super().stop()
 
     def work(self) -> None:
@@ -36,6 +36,7 @@ class ExecutionWorker(Worker):
             try:
                 future = self.thread_pool.submit(self._execute_task, task)
             except RuntimeError:
+                self.semaphore.release()
                 return
             future.add_done_callback(lambda _: self.semaphore.release())
 
