@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import os
 from typing import BinaryIO, Generator, List
 
 from .file_system_data_mapper import FileSystemDataMapper
@@ -47,6 +48,7 @@ class FileSystemTaskJournal:
         data = FileSystemTaskJournal.encode_record(record)
         file.write(data + b"\n")
         file.flush()
+        os.fsync(file.fileno())
 
     @staticmethod
     def decode_record(data: bytes) -> FileSystemTaskJournalRecord:
