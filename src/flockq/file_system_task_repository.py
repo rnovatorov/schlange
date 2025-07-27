@@ -7,7 +7,7 @@ import pathlib
 import tempfile
 from typing import Generator
 
-from .errors import TaskLockedError, TaskNotFoundError
+from .errors import TaskFilePathInvalidError, TaskLockedError, TaskNotFoundError
 from .file_system_task_journal import FileSystemTaskJournal, FileSystemTaskJournalRecord
 from .task import Task
 from .task_specification import TaskSpecification
@@ -44,6 +44,16 @@ class FileSystemTaskRepository:
         os.replace(temp_file.name, self.task_file_path(task.state, task.id))
 
     def get_task(self, task_state: TaskState, task_id: str) -> Task:
+        try:
+            return self._get_task(task_state, task_id)
+        except TaskFilePathInvalidError:
+            try:
+                self.repair_task_file_path(task_state, task_id)
+            except:
+                pass
+            raise TaskNotFoundError()
+
+    def _get_task(self, task_state: TaskState, task_id: str) -> Task:
         path = self.task_file_path(task_state, task_id)
         try:
             file = path.open("rb")
@@ -53,7 +63,7 @@ class FileSystemTaskRepository:
             journal = FileSystemTaskJournal.read(file)
             task = journal.rehydrate_task(task_id)
             if task.state != task_state:
-                raise TaskNotFoundError()
+                raise TaskFilePathInvalidError()
             return task
 
     def list_tasks(
@@ -64,16 +74,11 @@ class FileSystemTaskRepository:
                 continue
             (task_id, _) = path.name.split(".")
             try:
-                file = path.open("rb")
-            except FileNotFoundError:
+                task = self.get_task(task_state, task_id)
+            except TaskNotFoundError:
                 continue
-            with file:
-                journal = FileSystemTaskJournal.read(file)
-                task = journal.rehydrate_task(task_id)
-                if task.state != task_state:
-                    continue
-                if spec.is_satisfied_by(task):
-                    yield task
+            if spec.is_satisfied_by(task):
+                yield task
 
     def delete_task(self, task_state: TaskState, task_id: str) -> None:
         path = self.task_file_path(task_state, task_id)
@@ -81,6 +86,10 @@ class FileSystemTaskRepository:
             path.unlink()
         except FileNotFoundError:
             raise TaskNotFoundError()
+
+    def repair_task_file_path(self, task_state: TaskState, task_id: str) -> None:
+        with self.update_task(task_state, task_id):
+            pass
 
     @contextlib.contextmanager
     def update_task(self, task_state: TaskState, task_id: str) -> Generator[Task]:
