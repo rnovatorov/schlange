@@ -27,11 +27,19 @@ class FileSystemTaskRepository:
             task_dir_path = self.task_dir_path(task_state)
             task_dir_path.mkdir(exist_ok=True)
 
+    def make_partition(self, task: Task) -> None:
+        self.task_dir_partition_path(task.state, task.id).mkdir(exist_ok=True)
+
     def task_dir_path(self, task_state: TaskState) -> pathlib.Path:
         return self.data_dir_path / task_state
 
+    def task_dir_partition_path(
+        self, task_state: TaskState, task_id: str
+    ) -> pathlib.Path:
+        return self.task_dir_path(task_state) / task_id[:2]
+
     def task_file_path(self, task_state: TaskState, task_id: str) -> pathlib.Path:
-        return self.task_dir_path(task_state) / f"{task_id}.jsonl"
+        return self.task_dir_partition_path(task_state, task_id) / f"{task_id}.jsonl"
 
     def add_task(self, task: Task) -> None:
         with tempfile.NamedTemporaryFile(
@@ -41,6 +49,7 @@ class FileSystemTaskRepository:
         ) as temp_file:
             record = FileSystemTaskJournalRecord(events=task.change_log)
             FileSystemTaskJournal.write_record(record, temp_file)  # type: ignore
+        self.make_partition(task)
         os.replace(temp_file.name, self.task_file_path(task.state, task.id))
 
     def get_task(self, task_state: TaskState, task_id: str) -> Task:
@@ -69,16 +78,17 @@ class FileSystemTaskRepository:
     def list_tasks(
         self, task_state: TaskState, spec: TaskSpecification
     ) -> Generator[Task]:
-        for path in self.task_dir_path(task_state).iterdir():
-            if not path.name.endswith(".jsonl"):
-                continue
-            (task_id, _) = path.name.split(".")
-            try:
-                task = self.get_task(task_state, task_id)
-            except TaskNotFoundError:
-                continue
-            if spec.is_satisfied_by(task):
-                yield task
+        for partition in self.task_dir_path(task_state).iterdir():
+            for path in partition.iterdir():
+                if not path.name.endswith(".jsonl"):
+                    continue
+                (task_id, _) = path.name.split(".")
+                try:
+                    task = self.get_task(task_state, task_id)
+                except TaskNotFoundError:
+                    continue
+                if spec.is_satisfied_by(task):
+                    yield task
 
     def delete_task(self, task_state: TaskState, task_id: str) -> None:
         path = self.task_file_path(task_state, task_id)
@@ -106,6 +116,7 @@ class FileSystemTaskRepository:
             journal = FileSystemTaskJournal.read(file, repair=True)
             task = journal.rehydrate_task(task_id)
             if task.state != task_state:
+                self.make_partition(task)
                 try:
                     os.replace(path, self.task_file_path(task.state, task.id))
                 except FileNotFoundError:
@@ -116,4 +127,5 @@ class FileSystemTaskRepository:
                 record = FileSystemTaskJournalRecord(events=task.change_log)
                 FileSystemTaskJournal.write_record(record, file)
             if task.state != task_state:
+                self.make_partition(task)
                 os.replace(path, self.task_file_path(task.state, task.id))
