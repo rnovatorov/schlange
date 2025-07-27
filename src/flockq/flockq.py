@@ -28,8 +28,8 @@ DEFAULT_EXECUTION_WORKER_INTERVAL = 1
 DEFAULT_EXECUTION_WORKER_PROCESSES = os.cpu_count() or 4
 
 DEFAULT_CLEANUP_POLICY = CleanupPolicy(
-    delete_succeeded_after=60,
-    delete_failed_after=60,
+    delete_succeeded_after=60 * 60 * 24,
+    delete_failed_after=60 * 60 * 24 * 7,
 )
 DEFAULT_CLEANUP_WORKER_INTERVAL = 60
 
