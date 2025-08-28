@@ -2,12 +2,12 @@ import argparse
 import json
 import logging
 import pathlib
-import random
 import sys
+import threading
 import time
 from typing import BinaryIO
 
-from .flockq import Flockq
+from .flockq import DEFAULT_EXECUTION_WORKER_PROCESSES, Flockq
 from .task import Task
 
 
@@ -29,15 +29,41 @@ def cli():
                         data_dir=args.data_dir,
                         task_id=args.task_id,
                     )
-                case "dummy_exec":
-                    dummy_exec_task(
-                        data_dir=args.data_dir,
-                        task_kind=args.kind,
-                    )
                 case _:
                     raise NotImplementedError(args.command)
+        case "bench":
+            bench(
+                data_dir=args.data_dir,
+                tasks=args.tasks,
+                workers=args.workers,
+            )
         case _:
             raise NotImplementedError(args.command)
+
+
+def bench(data_dir: pathlib.Path, tasks: int, workers: int) -> None:
+    task_kind = "bench"
+
+    q = Flockq.new(data_dir)
+    for i in range(tasks):
+        q.create_task(kind=task_kind, args={}, delay=0)
+
+    tasks_handled = 0
+    done = threading.Event()
+
+    def handle_task(task: Task) -> None:
+        nonlocal tasks_handled
+        tasks_handled += 1
+        if tasks_handled == tasks:
+            done.set()
+
+    q.register_task_handler(task_kind="bench", task_handler=handle_task)
+    started_at = time.time()
+    with q:
+        done.wait()
+    finished_at = time.time()
+    elapsed = finished_at - started_at
+    print(f"{tasks / elapsed}")
 
 
 def create_task(
@@ -61,20 +87,6 @@ def inspect_task(data_dir: pathlib.Path, task_id: str) -> None:
     print(f"state: {task.state}")
     print(f"executions: {task.executions}")
     print(f"retry_policy: {task.retry_policy}")
-
-
-def dummy_exec_task(data_dir: pathlib.Path, task_kind: str) -> None:
-    def handle_task(task: Task) -> None:
-        time.sleep(random.random())
-        if random.random() < 0.5:
-            raise RuntimeError("oops")
-
-    with Flockq.new(data_dir) as q:
-        q.register_task_handler(task_kind, handle_task)
-        try:
-            time.sleep(60 * 60)
-        except KeyboardInterrupt:
-            return
 
 
 def configure_logging(level: int):
@@ -104,6 +116,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+
     task_parser = subparsers.add_parser("task")
     task_subparsers = task_parser.add_subparsers(dest="task_command", required=True)
     task_create_parser = task_subparsers.add_parser("create")
@@ -128,10 +141,19 @@ def parse_args() -> argparse.Namespace:
         "task_id",
         type=str,
     )
-    task_dummy_exec_parser = task_subparsers.add_parser("dummy_exec")
-    task_dummy_exec_parser.add_argument(
-        "--kind",
-        type=str,
-        required=True,
+
+    bench_parser = subparsers.add_parser("bench")
+    bench_parser.add_argument(
+        "-t",
+        "--tasks",
+        type=int,
+        default=1000,
     )
+    bench_parser.add_argument(
+        "-w",
+        "--workers",
+        type=int,
+        default=DEFAULT_EXECUTION_WORKER_PROCESSES,
+    )
+
     return parser.parse_args()
