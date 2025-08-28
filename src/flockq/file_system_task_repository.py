@@ -128,4 +128,5 @@ class FileSystemTaskRepository:
                 FileSystemTaskJournal.write_record(record, file)
             if task.state != task_state:
                 self.make_partition(task)
+                file.flush()
                 os.replace(path, self.task_file_path(task.state, task.id))
