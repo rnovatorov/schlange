@@ -44,26 +44,37 @@ def cli():
 def bench(data_dir: pathlib.Path, tasks: int, workers: int) -> None:
     task_kind = "bench"
 
-    q = Flockq.new(data_dir)
+    q = Flockq.new(data_dir, execution_worker_processes=workers)
+    started_creating_tasks_at = time.time()
     for i in range(tasks):
         q.create_task(kind=task_kind, args={}, delay=0)
+    finished_creating_tasks_at = time.time()
+    creating_tasks_took = finished_creating_tasks_at - started_creating_tasks_at
 
+    lock = threading.Lock()
     tasks_handled = 0
     done = threading.Event()
 
     def handle_task(task: Task) -> None:
         nonlocal tasks_handled
-        tasks_handled += 1
+        with lock:
+            tasks_handled += 1
         if tasks_handled == tasks:
             done.set()
 
     q.register_task_handler(task_kind="bench", task_handler=handle_task)
-    started_at = time.time()
+    started_handling_tasks_at = time.time()
     with q:
         done.wait()
-    finished_at = time.time()
-    elapsed = finished_at - started_at
-    print(f"{tasks / elapsed}")
+    finished_handling_tasks_at = time.time()
+    handling_tasks_took = finished_handling_tasks_at - started_handling_tasks_at
+
+    print(
+        f"creating {tasks} tasks using 1 workers took {creating_tasks_took:.2f} seconds, rate is {tasks/creating_tasks_took:.2f} tasks per second"
+    )
+    print(
+        f"handling {tasks} tasks using {workers} workers took {handling_tasks_took:.2f} seconds, rate is {tasks/handling_tasks_took:.2f} tasks per second"
+    )
 
 
 def create_task(
