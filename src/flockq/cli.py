@@ -11,7 +11,7 @@ from .flockq import DEFAULT_EXECUTION_WORKER_PROCESSES, Flockq
 from .task import Task
 
 
-def cli():
+def main() -> None:
     args = parse_args()
     configure_logging(level=logging.DEBUG if args.verbose else logging.INFO)
     match args.command:
