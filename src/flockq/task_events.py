@@ -6,12 +6,8 @@ from .retry_policy import RetryPolicy
 from .task_args import TaskArgs
 
 
-class TaskEvent(Event):
-    pass
-
-
 @dataclasses.dataclass
-class TaskCreated(TaskEvent):
+class TaskCreated(Event):
 
     kind: str
     args: TaskArgs
@@ -20,27 +16,27 @@ class TaskCreated(TaskEvent):
 
 
 @dataclasses.dataclass
-class TaskExecutionBegun(TaskEvent):
+class TaskExecutionBegun(Event):
     pass
 
 
 @dataclasses.dataclass
-class TaskExecutionEnded(TaskEvent):
+class TaskExecutionEnded(Event):
 
     error: Optional[str]
 
 
 @dataclasses.dataclass
-class TaskSucceeded(TaskEvent):
+class TaskSucceeded(Event):
     pass
 
 
 @dataclasses.dataclass
-class TaskDelayed(TaskEvent):
+class TaskDelayed(Event):
 
     delay: float
 
 
 @dataclasses.dataclass
-class TaskFailed(TaskEvent):
+class TaskFailed(Event):
     pass

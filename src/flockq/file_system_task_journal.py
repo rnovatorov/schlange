@@ -3,10 +3,10 @@ import json
 import os
 from typing import BinaryIO, Generator, List
 
+from .event import Event
 from .file_system_data_mapper import FileSystemDataMapper
 from .file_system_task_journal_record import FileSystemTaskJournalRecord
 from .task import Task
-from .task_events import TaskEvent
 
 
 @dataclasses.dataclass
@@ -18,7 +18,7 @@ class FileSystemTaskJournal:
         return Task.rehydrate(id=task_id, events=self.events)
 
     @property
-    def events(self) -> Generator[TaskEvent]:
+    def events(self) -> Generator[Event]:
         for record in self.records:
             for event in record.events:
                 yield event

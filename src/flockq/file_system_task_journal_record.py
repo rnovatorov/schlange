@@ -1,10 +1,10 @@
 import dataclasses
 from typing import List
 
-from .task_events import TaskEvent
+from .event import Event
 
 
 @dataclasses.dataclass
 class FileSystemTaskJournalRecord:
 
-    events: List[TaskEvent]
+    events: List[Event]

@@ -6,9 +6,9 @@ from .errors import TaskNotActiveError, TaskNotReadyError, TooManyAttemptsError
 from .retry_policy import RetryPolicy
 from .task_args import TaskArgs
 from .task_events import (
+    Event,
     TaskCreated,
     TaskDelayed,
-    TaskEvent,
     TaskExecutionBegun,
     TaskExecutionEnded,
     TaskFailed,
@@ -19,7 +19,11 @@ from .task_projection import TaskProjection
 from .task_state import TaskState
 
 
-class Task(Aggregate[TaskEvent, TaskProjection]):
+class Task(Aggregate):
+
+    def __init__(self, id: str) -> None:
+        super().__init__(id=id)
+        self._projection: Optional[TaskProjection] = None
 
     @classmethod
     def create(
@@ -100,7 +104,7 @@ class Task(Aggregate[TaskEvent, TaskProjection]):
             return
         self._emit(TaskDelayed(timestamp=now, delay=delay))
 
-    def _apply(self, event: TaskEvent) -> None:
+    def _apply(self, event: Event) -> None:
         if isinstance(event, TaskCreated):
             self._apply_created(event)
         elif isinstance(event, TaskExecutionBegun):
