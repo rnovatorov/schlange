@@ -4,20 +4,15 @@ import os
 import pathlib
 from typing import Callable, Optional, Union
 
-from .cleanup_policy import CleanupPolicy
+from flockq import core
+
 from .cleanup_worker import CleanupWorker
 from .execution_worker import ExecutionWorker
 from .file_system_task_repository import FileSystemTaskRepository
-from .retry_policy import RetryPolicy
-from .task import Task
-from .task_args import TaskArgs
-from .task_handler import TaskHandler
-from .task_handler_registry import TaskHandlerRegistry
-from .task_service import TaskService
 
 LOGGER = logging.getLogger(__name__)
 
-DEFAULT_RETRY_POLICY = RetryPolicy(
+DEFAULT_RETRY_POLICY = core.RetryPolicy(
     initial_delay=1,
     backoff_factor=2.0,
     max_delay=60 * 60 * 24,
@@ -27,20 +22,20 @@ DEFAULT_RETRY_POLICY = RetryPolicy(
 DEFAULT_EXECUTION_WORKER_INTERVAL = 1
 DEFAULT_EXECUTION_WORKER_PROCESSES = os.cpu_count() or 4
 
-DEFAULT_CLEANUP_POLICY = CleanupPolicy(
+DEFAULT_CLEANUP_POLICY = core.CleanupPolicy(
     delete_succeeded_after=60 * 60 * 24,
     delete_failed_after=60 * 60 * 24 * 7,
 )
 DEFAULT_CLEANUP_WORKER_INTERVAL = 60
 
-DEFAULT_TASK_HANDLER_REGISTRY = TaskHandlerRegistry()
+DEFAULT_TASK_HANDLER_REGISTRY = core.TaskHandlerRegistry()
 
 
 @dataclasses.dataclass
 class Flockq:
 
-    task_service: TaskService
-    retry_policy: RetryPolicy
+    task_service: core.TaskService
+    retry_policy: core.RetryPolicy
     execution_worker: ExecutionWorker
     cleanup_worker: CleanupWorker
 
@@ -63,18 +58,18 @@ class Flockq:
     def new(
         cls,
         data_dir_path: Union[str, pathlib.Path],
-        task_handler_registry: TaskHandlerRegistry = DEFAULT_TASK_HANDLER_REGISTRY,
-        retry_policy: RetryPolicy = DEFAULT_RETRY_POLICY,
+        task_handler_registry: core.TaskHandlerRegistry = DEFAULT_TASK_HANDLER_REGISTRY,
+        retry_policy: core.RetryPolicy = DEFAULT_RETRY_POLICY,
         execution_worker_interval: float = DEFAULT_EXECUTION_WORKER_INTERVAL,
         execution_worker_processes: int = DEFAULT_EXECUTION_WORKER_PROCESSES,
-        cleanup_policy: CleanupPolicy = DEFAULT_CLEANUP_POLICY,
+        cleanup_policy: core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
     ) -> "Flockq":
         task_repository = FileSystemTaskRepository(
             data_dir_path=pathlib.Path(data_dir_path)
         )
         task_repository.make_dirs()
-        task_service = TaskService(
+        task_service = core.TaskService(
             task_repository=task_repository, task_handler_registry=task_handler_registry
         )
         execution_worker = ExecutionWorker(
@@ -94,23 +89,27 @@ class Flockq:
             cleanup_worker=cleanup_worker,
         )
 
-    def task_handler(self, task_kind: str) -> Callable[[TaskHandler], TaskHandler]:
-        def decorator(task_handler: TaskHandler) -> TaskHandler:
+    def task_handler(
+        self, task_kind: str
+    ) -> Callable[[core.TaskHandler], core.TaskHandler]:
+        def decorator(task_handler: core.TaskHandler) -> core.TaskHandler:
             self.register_task_handler(task_kind, task_handler)
             return task_handler
 
         return decorator
 
-    def register_task_handler(self, task_kind: str, task_handler: TaskHandler) -> None:
+    def register_task_handler(
+        self, task_kind: str, task_handler: core.TaskHandler
+    ) -> None:
         self.task_service.register_task_handler(task_kind, task_handler)
 
     def create_task(
         self,
         kind: str,
-        args: TaskArgs,
+        args: core.TaskArgs,
         delay: float = 0.0,
-        retry_policy: Optional[RetryPolicy] = None,
-    ) -> Task:
+        retry_policy: Optional[core.RetryPolicy] = None,
+    ) -> core.Task:
         if retry_policy is None:
             retry_policy = self.retry_policy
         LOGGER.debug(
@@ -126,5 +125,5 @@ class Flockq:
         LOGGER.info("task created: task=%r", task)
         return task
 
-    def task(self, task_id: str) -> Task:
+    def task(self, task_id: str) -> core.Task:
         return self.task_service.task(task_id)

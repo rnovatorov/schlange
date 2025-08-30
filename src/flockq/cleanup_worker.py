@@ -1,8 +1,7 @@
 import logging
 
-from .cleanup_policy import CleanupPolicy
-from .errors import TaskNotFoundError
-from .task_service import TaskService
+from flockq import core
+
 from .worker import Worker
 
 LOGGER = logging.getLogger(__name__)
@@ -11,7 +10,10 @@ LOGGER = logging.getLogger(__name__)
 class CleanupWorker(Worker):
 
     def __init__(
-        self, interval: float, task_service: TaskService, cleanup_policy: CleanupPolicy
+        self,
+        interval: float,
+        task_service: core.TaskService,
+        cleanup_policy: core.CleanupPolicy,
     ) -> None:
         super().__init__(name="flockq.CleanupWorker", interval=interval)
         self.task_service = task_service
@@ -31,7 +33,7 @@ class CleanupWorker(Worker):
                 LOGGER.error(
                     "failed to delete succeeded task: id=%s, err=%r", task.id, err
                 )
-            except TaskNotFoundError as err:
+            except core.TaskNotFoundError as err:
                 LOGGER.debug(
                     "failed to delete succeeded task: id=%s, err=%r", task.id, err
                 )
@@ -46,7 +48,7 @@ class CleanupWorker(Worker):
                 LOGGER.error(
                     "failed to delete failed task: id=%s, err=%r", task.id, err
                 )
-            except TaskNotFoundError as err:
+            except core.TaskNotFoundError as err:
                 LOGGER.debug(
                     "failed to delete failed task: id=%s, err=%r", task.id, err
                 )

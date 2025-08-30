@@ -7,11 +7,10 @@ import pathlib
 import tempfile
 from typing import Generator
 
-from .errors import TaskFilePathInvalidError, TaskLockedError, TaskNotFoundError
+from flockq import core
+
+from .file_system_errors import TaskFilePathInvalidError
 from .file_system_task_journal import FileSystemTaskJournal, FileSystemTaskJournalRecord
-from .task import Task
-from .task_specification import TaskSpecification
-from .task_state import TaskState
 
 LOGGER = logging.getLogger(__name__)
 
@@ -23,25 +22,25 @@ class FileSystemTaskRepository:
 
     def make_dirs(self) -> None:
         self.data_dir_path.mkdir(exist_ok=True)
-        for task_state in TaskState:
+        for task_state in core.TaskState:
             task_dir_path = self.task_dir_path(task_state)
             task_dir_path.mkdir(exist_ok=True)
 
-    def make_partition(self, task: Task) -> None:
+    def make_partition(self, task: core.Task) -> None:
         self.task_dir_partition_path(task.state, task.id).mkdir(exist_ok=True)
 
-    def task_dir_path(self, task_state: TaskState) -> pathlib.Path:
+    def task_dir_path(self, task_state: core.TaskState) -> pathlib.Path:
         return self.data_dir_path / task_state
 
     def task_dir_partition_path(
-        self, task_state: TaskState, task_id: str
+        self, task_state: core.TaskState, task_id: str
     ) -> pathlib.Path:
         return self.task_dir_path(task_state) / task_id[:2]
 
-    def task_file_path(self, task_state: TaskState, task_id: str) -> pathlib.Path:
+    def task_file_path(self, task_state: core.TaskState, task_id: str) -> pathlib.Path:
         return self.task_dir_partition_path(task_state, task_id) / f"{task_id}.jsonl"
 
-    def add_task(self, task: Task) -> None:
+    def add_task(self, task: core.Task) -> None:
         with tempfile.NamedTemporaryFile(
             dir=self.data_dir_path,
             delete=False,
@@ -52,7 +51,7 @@ class FileSystemTaskRepository:
         self.make_partition(task)
         os.replace(temp_file.name, self.task_file_path(task.state, task.id))
 
-    def get_task(self, task_state: TaskState, task_id: str) -> Task:
+    def get_task(self, task_state: core.TaskState, task_id: str) -> core.Task:
         try:
             return self._get_task(task_state, task_id)
         except TaskFilePathInvalidError:
@@ -60,14 +59,14 @@ class FileSystemTaskRepository:
                 self.repair_task_file_path(task_state, task_id)
             except:
                 pass
-            raise TaskNotFoundError()
+            raise core.TaskNotFoundError()
 
-    def _get_task(self, task_state: TaskState, task_id: str) -> Task:
+    def _get_task(self, task_state: core.TaskState, task_id: str) -> core.Task:
         path = self.task_file_path(task_state, task_id)
         try:
             file = path.open("rb")
         except FileNotFoundError:
-            raise TaskNotFoundError()
+            raise core.TaskNotFoundError()
         with file:
             journal = FileSystemTaskJournal.read(file)
             task = journal.rehydrate_task(task_id)
@@ -76,8 +75,8 @@ class FileSystemTaskRepository:
             return task
 
     def list_tasks(
-        self, task_state: TaskState, spec: TaskSpecification
-    ) -> Generator[Task]:
+        self, task_state: core.TaskState, spec: core.TaskSpecification
+    ) -> Generator[core.Task]:
         for partition in self.task_dir_path(task_state).iterdir():
             for path in partition.iterdir():
                 if not path.name.endswith(".jsonl"):
@@ -85,34 +84,36 @@ class FileSystemTaskRepository:
                 (task_id, _) = path.name.split(".")
                 try:
                     task = self.get_task(task_state, task_id)
-                except TaskNotFoundError:
+                except core.TaskNotFoundError:
                     continue
                 if spec.is_satisfied_by(task):
                     yield task
 
-    def delete_task(self, task_state: TaskState, task_id: str) -> None:
+    def delete_task(self, task_state: core.TaskState, task_id: str) -> None:
         path = self.task_file_path(task_state, task_id)
         try:
             path.unlink()
         except FileNotFoundError:
-            raise TaskNotFoundError()
+            raise core.TaskNotFoundError()
 
-    def repair_task_file_path(self, task_state: TaskState, task_id: str) -> None:
+    def repair_task_file_path(self, task_state: core.TaskState, task_id: str) -> None:
         with self.update_task(task_state, task_id):
             pass
 
     @contextlib.contextmanager
-    def update_task(self, task_state: TaskState, task_id: str) -> Generator[Task]:
+    def update_task(
+        self, task_state: core.TaskState, task_id: str
+    ) -> Generator[core.Task]:
         path = self.task_file_path(task_state, task_id)
         try:
             file = path.open("r+b")
         except FileNotFoundError:
-            raise TaskNotFoundError()
+            raise core.TaskNotFoundError()
         with file:
             try:
                 fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
-                raise TaskLockedError()
+                raise core.TaskLockedError()
             journal = FileSystemTaskJournal.read(file, repair=True)
             task = journal.rehydrate_task(task_id)
             if task.state != task_state:
@@ -121,7 +122,7 @@ class FileSystemTaskRepository:
                     os.replace(path, self.task_file_path(task.state, task.id))
                 except FileNotFoundError:
                     pass
-                raise TaskNotFoundError()
+                raise core.TaskNotFoundError()
             yield task
             if task.change_log:
                 record = FileSystemTaskJournalRecord(events=task.change_log)

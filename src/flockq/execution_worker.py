@@ -2,15 +2,8 @@ import concurrent.futures
 import logging
 import threading
 
-from .errors import (
-    TaskHandlerNotFound,
-    TaskLockedError,
-    TaskNotActiveError,
-    TaskNotFoundError,
-    TaskNotReadyError,
-)
-from .task import Task
-from .task_service import TaskService
+from flockq import core
+
 from .worker import Worker
 
 LOGGER = logging.getLogger(__name__)
@@ -19,7 +12,7 @@ LOGGER = logging.getLogger(__name__)
 class ExecutionWorker(Worker):
 
     def __init__(
-        self, interval: float, task_service: TaskService, processes: int
+        self, interval: float, task_service: core.TaskService, processes: int
     ) -> None:
         super().__init__(name="flockq.ExecutionWorker", interval=interval)
         self.task_service = task_service
@@ -40,7 +33,7 @@ class ExecutionWorker(Worker):
                 return
             future.add_done_callback(lambda _: self.semaphore.release())
 
-    def _execute_task(self, task: Task) -> None:
+    def _execute_task(self, task: core.Task) -> None:
         try:
             LOGGER.debug("executing task: id=%s", task.id)
             task = self.task_service.execute_task(task.id)
@@ -54,12 +47,12 @@ class ExecutionWorker(Worker):
             )
         except IOError as err:
             LOGGER.error("failed to execute task: id=%s, err=%r", task.id, err)
-        except TaskHandlerNotFound as err:
+        except core.TaskHandlerNotFound as err:
             LOGGER.warning("failed to execute task: id=%s, err=%r", task.id, err)
         except (
-            TaskNotActiveError,
-            TaskNotReadyError,
-            TaskLockedError,
-            TaskNotFoundError,
+            core.TaskNotActiveError,
+            core.TaskNotReadyError,
+            core.TaskLockedError,
+            core.TaskNotFoundError,
         ) as err:
             LOGGER.debug("failed to execute task: id=%s, err=%r", task.id, err)

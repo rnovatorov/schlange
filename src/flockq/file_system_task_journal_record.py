@@ -1,10 +1,10 @@
 import dataclasses
 from typing import List
 
-from .event import Event
+from flockq import core
 
 
 @dataclasses.dataclass
 class FileSystemTaskJournalRecord:
 
-    events: List[Event]
+    events: List[core.Event]

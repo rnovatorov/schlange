@@ -7,8 +7,9 @@ import threading
 import time
 from typing import BinaryIO
 
+from flockq import core
+
 from .flockq import DEFAULT_EXECUTION_WORKER_PROCESSES, Flockq
-from .task import Task
 
 
 def main() -> None:
@@ -55,7 +56,7 @@ def bench(data_dir: pathlib.Path, tasks: int, workers: int) -> None:
     tasks_handled = 0
     done = threading.Event()
 
-    def handle_task(task: Task) -> None:
+    def handle_task(task: core.Task) -> None:
         nonlocal tasks_handled
         with lock:
             tasks_handled += 1

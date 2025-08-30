@@ -3,10 +3,10 @@ import json
 import os
 from typing import BinaryIO, Generator, List
 
-from .event import Event
+from flockq import core
+
 from .file_system_data_mapper import FileSystemDataMapper
 from .file_system_task_journal_record import FileSystemTaskJournalRecord
-from .task import Task
 
 
 @dataclasses.dataclass
@@ -14,11 +14,11 @@ class FileSystemTaskJournal:
 
     records: List[FileSystemTaskJournalRecord]
 
-    def rehydrate_task(self, task_id: str) -> Task:
-        return Task.rehydrate(id=task_id, events=self.events)
+    def rehydrate_task(self, task_id: str) -> core.Task:
+        return core.Task.rehydrate(id=task_id, events=self.events)
 
     @property
-    def events(self) -> Generator[Event]:
+    def events(self) -> Generator[core.Event]:
         for record in self.records:
             for event in record.events:
                 yield event

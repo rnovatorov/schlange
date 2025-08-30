@@ -24,7 +24,3 @@ class TaskNotReadyError(Error):
 
 class TaskHandlerNotFound(Error):
     pass
-
-
-class TaskFilePathInvalidError(Error):
-    pass
