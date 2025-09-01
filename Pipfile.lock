@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "3aa347567b7adb38e364f3e24569fa44e8c635188bc82c4a058d5f768034acf7"
+            "sha256": "198a124a3d487ed89ce9a375a67696507a3c93b9be0f0a3bc8489161ac32c67f"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -14,7 +14,7 @@
         ]
     },
     "default": {
-        "flockq": {
+        "schlange": {
             "editable": true,
             "file": "."
         }

@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-flockq = {file = ".", editable = true}
+schlange = {file = ".", editable = true}
 
 [dev-packages]
 black = "*"

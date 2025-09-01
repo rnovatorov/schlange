@@ -2,7 +2,7 @@ import concurrent.futures
 import logging
 import threading
 
-from flockq import core
+from schlange import core
 
 from .worker import Worker
 
@@ -14,7 +14,7 @@ class ExecutionWorker(Worker):
     def __init__(
         self, interval: float, task_service: core.TaskService, processes: int
     ) -> None:
-        super().__init__(name="flockq.ExecutionWorker", interval=interval)
+        super().__init__(name="schlange.ExecutionWorker", interval=interval)
         self.task_service = task_service
         self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=processes)
         self.semaphore = threading.BoundedSemaphore(processes)

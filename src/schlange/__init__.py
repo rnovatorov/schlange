@@ -1,6 +1,6 @@
 import logging
 
-from flockq.core import (
+from schlange.core import (
     CleanupPolicy,
     RetryPolicy,
     Task,
@@ -9,14 +9,14 @@ from flockq.core import (
     TaskState,
 )
 
-from .flockq import Flockq
+from .schlange import Schlange
 
 logging.getLogger(__name__).handlers = [logging.NullHandler()]
 
 __all__ = [
     "CleanupPolicy",
-    "Flockq",
     "RetryPolicy",
+    "Schlange",
     "Task",
     "TaskArgs",
     "TaskExecution",

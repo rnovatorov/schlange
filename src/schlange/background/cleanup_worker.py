@@ -1,6 +1,6 @@
 import logging
 
-from flockq import core
+from schlange import core
 
 from .worker import Worker
 
@@ -15,7 +15,7 @@ class CleanupWorker(Worker):
         task_service: core.TaskService,
         cleanup_policy: core.CleanupPolicy,
     ) -> None:
-        super().__init__(name="flockq.CleanupWorker", interval=interval)
+        super().__init__(name="schlange.CleanupWorker", interval=interval)
         self.task_service = task_service
         self.cleanup_policy = cleanup_policy
 

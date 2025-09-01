@@ -2,7 +2,7 @@ import json
 import sqlite3
 from typing import List
 
-from flockq import core
+from schlange import core
 
 from .data_mapper import DataMapper
 from .database import Database

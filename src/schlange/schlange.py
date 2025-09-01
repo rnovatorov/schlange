@@ -28,14 +28,14 @@ DEFAULT_SQLITE_DATABASE_SYNCHRONOUS_FULL = True
 
 
 @dataclasses.dataclass
-class Flockq:
+class Schlange:
 
     task_service: core.TaskService
     retry_policy: core.RetryPolicy
     execution_worker: background.ExecutionWorker
     cleanup_worker: background.CleanupWorker
 
-    def __enter__(self) -> "Flockq":
+    def __enter__(self) -> "Schlange":
         self.start()
         return self
 
@@ -62,7 +62,7 @@ class Flockq:
         cleanup_policy: core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         sqlite_database_synchronous_full: bool = DEFAULT_SQLITE_DATABASE_SYNCHRONOUS_FULL,
-    ) -> Generator["Flockq"]:
+    ) -> Generator["Schlange"]:
         with sqlite.Database.open(
             url=url, synchronous_full=sqlite_database_synchronous_full
         ) as db:

@@ -1,6 +1,6 @@
 import datetime
 
-from flockq import core
+from schlange import core
 
 
 class DataMapper:

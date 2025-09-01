@@ -6,9 +6,9 @@ import threading
 import time
 from typing import BinaryIO
 
-from flockq import core
+from schlange import core
 
-from .flockq import DEFAULT_EXECUTION_WORKER_PROCESSES, Flockq
+from .schlange import DEFAULT_EXECUTION_WORKER_PROCESSES, Schlange
 
 
 def main() -> None:
@@ -52,7 +52,7 @@ def bench(url: str, tasks: int, workers: int) -> None:
         if tasks_handled == tasks:
             done.set()
 
-    with Flockq.new(
+    with Schlange.new(
         url, task_handler=handle_task, execution_worker_processes=workers
     ) as q:
         started_creating_tasks_at = time.time()
@@ -76,14 +76,14 @@ def bench(url: str, tasks: int, workers: int) -> None:
 
 
 def create_task(url: str, args_file: BinaryIO, delay: float) -> None:
-    with Flockq.new(url) as q:
+    with Schlange.new(url) as q:
         for line in args_file:
             args = json.loads(line)
             q.create_task(args, delay=delay)
 
 
 def inspect_task(url: str, task_id: str) -> None:
-    with Flockq.new(url) as q:
+    with Schlange.new(url) as q:
         task = q.task(task_id)
         if task is None:
             print("not found")
@@ -110,7 +110,7 @@ def configure_logging(level: int):
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="flockq")
+    parser = argparse.ArgumentParser(prog="schlange")
     parser.add_argument(
         "-u",
         "--url",
