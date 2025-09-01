@@ -3,7 +3,7 @@ import setuptools
 setuptools.setup(
     name="schlange-queue",
     version="0.0.1",
-    description="Persistent task queue",
+    description="Lightweight, persistent, single-node task queue",
     packages=setuptools.find_packages("src"),
     package_dir={"": "src"},
     package_data={"schlange": ["sqlite/migrations/*.sql"]},
