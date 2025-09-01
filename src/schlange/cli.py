@@ -127,11 +127,6 @@ def parse_args() -> argparse.Namespace:
     task_subparsers = task_parser.add_subparsers(dest="task_command", required=True)
     task_create_parser = task_subparsers.add_parser("create")
     task_create_parser.add_argument(
-        "--kind",
-        type=str,
-        required=True,
-    )
-    task_create_parser.add_argument(
         "--delay",
         type=float,
         default=0,
