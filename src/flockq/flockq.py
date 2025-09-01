@@ -4,9 +4,7 @@ import logging
 import os
 from typing import Generator, Optional
 
-from . import core, sqlite
-from .cleanup_worker import CleanupWorker
-from .execution_worker import ExecutionWorker
+from . import background, core, sqlite
 
 LOGGER = logging.getLogger(__name__)
 
@@ -34,8 +32,8 @@ class Flockq:
 
     task_service: core.TaskService
     retry_policy: core.RetryPolicy
-    execution_worker: ExecutionWorker
-    cleanup_worker: CleanupWorker
+    execution_worker: background.ExecutionWorker
+    cleanup_worker: background.CleanupWorker
 
     def __enter__(self) -> "Flockq":
         self.start()
@@ -73,12 +71,12 @@ class Flockq:
             task_service = core.TaskService(
                 task_repository=task_repository, task_handler=task_handler
             )
-            execution_worker = ExecutionWorker(
+            execution_worker = background.ExecutionWorker(
                 interval=execution_worker_interval,
                 task_service=task_service,
                 processes=execution_worker_processes,
             )
-            cleanup_worker = CleanupWorker(
+            cleanup_worker = background.CleanupWorker(
                 interval=cleanup_worker_interval,
                 task_service=task_service,
                 cleanup_policy=cleanup_policy,
