@@ -1,20 +1,21 @@
 import dataclasses
 import datetime
-from typing import Optional, Set
+from typing import Optional
 
 from .task import Task
+from .task_state import TaskState
 
 
 @dataclasses.dataclass
 class TaskSpecification:
 
-    kind_in: Optional[Set[str]] = None
+    state: Optional[TaskState] = None
     ready_as_of: Optional[datetime.datetime] = None
     last_execution_ended_before: Optional[datetime.datetime] = None
 
     def is_satisfied_by(self, task: Task) -> bool:
         preconditions = [
-            (self.kind_in is None or task.kind in self.kind_in),
+            (self.state is None or task.state == self.state),
             (self.ready_as_of is None or task.ready_at <= self.ready_as_of),
             (
                 self.last_execution_ended_before is None

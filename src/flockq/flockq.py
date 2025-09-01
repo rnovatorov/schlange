@@ -1,14 +1,12 @@
+import contextlib
 import dataclasses
 import logging
 import os
-import pathlib
-from typing import Callable, Optional, Union
+from typing import Generator, Optional
 
-from flockq import core
-
+from . import core, sqlite
 from .cleanup_worker import CleanupWorker
 from .execution_worker import ExecutionWorker
-from .file_system_task_repository import FileSystemTaskRepository
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +26,7 @@ DEFAULT_CLEANUP_POLICY = core.CleanupPolicy(
 )
 DEFAULT_CLEANUP_WORKER_INTERVAL = 60
 
-DEFAULT_TASK_HANDLER_REGISTRY = core.TaskHandlerRegistry()
+DEFAULT_SQLITE_DATABASE_SYNCHRONOUS_FULL = True
 
 
 @dataclasses.dataclass
@@ -55,72 +53,59 @@ class Flockq:
         self.execution_worker.stop()
 
     @classmethod
+    @contextlib.contextmanager
     def new(
         cls,
-        data_dir_path: Union[str, pathlib.Path],
-        task_handler_registry: core.TaskHandlerRegistry = DEFAULT_TASK_HANDLER_REGISTRY,
+        url: str,
+        task_handler: Optional[core.TaskHandler] = None,
         retry_policy: core.RetryPolicy = DEFAULT_RETRY_POLICY,
         execution_worker_interval: float = DEFAULT_EXECUTION_WORKER_INTERVAL,
         execution_worker_processes: int = DEFAULT_EXECUTION_WORKER_PROCESSES,
         cleanup_policy: core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
-    ) -> "Flockq":
-        task_repository = FileSystemTaskRepository(
-            data_dir_path=pathlib.Path(data_dir_path)
-        )
-        task_repository.make_dirs()
-        task_service = core.TaskService(
-            task_repository=task_repository, task_handler_registry=task_handler_registry
-        )
-        execution_worker = ExecutionWorker(
-            interval=execution_worker_interval,
-            task_service=task_service,
-            processes=execution_worker_processes,
-        )
-        cleanup_worker = CleanupWorker(
-            interval=cleanup_worker_interval,
-            task_service=task_service,
-            cleanup_policy=cleanup_policy,
-        )
-        return cls(
-            task_service=task_service,
-            retry_policy=retry_policy,
-            execution_worker=execution_worker,
-            cleanup_worker=cleanup_worker,
-        )
-
-    def task_handler(
-        self, task_kind: str
-    ) -> Callable[[core.TaskHandler], core.TaskHandler]:
-        def decorator(task_handler: core.TaskHandler) -> core.TaskHandler:
-            self.register_task_handler(task_kind, task_handler)
-            return task_handler
-
-        return decorator
-
-    def register_task_handler(
-        self, task_kind: str, task_handler: core.TaskHandler
-    ) -> None:
-        self.task_service.register_task_handler(task_kind, task_handler)
+        sqlite_database_synchronous_full: bool = DEFAULT_SQLITE_DATABASE_SYNCHRONOUS_FULL,
+    ) -> Generator["Flockq"]:
+        with sqlite.Database.open(
+            url=url, synchronous_full=sqlite_database_synchronous_full
+        ) as db:
+            db.migrate()
+            task_repository = sqlite.TaskRepository(db=db)
+            task_service = core.TaskService(
+                task_repository=task_repository, task_handler=task_handler
+            )
+            execution_worker = ExecutionWorker(
+                interval=execution_worker_interval,
+                task_service=task_service,
+                processes=execution_worker_processes,
+            )
+            cleanup_worker = CleanupWorker(
+                interval=cleanup_worker_interval,
+                task_service=task_service,
+                cleanup_policy=cleanup_policy,
+            )
+            yield cls(
+                task_service=task_service,
+                retry_policy=retry_policy,
+                execution_worker=execution_worker,
+                cleanup_worker=cleanup_worker,
+            )
 
     def create_task(
         self,
-        kind: str,
-        args: core.TaskArgs,
+        args: core.DTO,
         delay: float = 0.0,
         retry_policy: Optional[core.RetryPolicy] = None,
     ) -> core.Task:
         if retry_policy is None:
             retry_policy = self.retry_policy
         LOGGER.debug(
-            "creating task: kind=%s, args=%s, delay=%f, retry_policy=%r",
-            kind,
+            "creating task: args=%s, delay=%f, retry_policy=%r",
             args,
             delay,
             retry_policy,
         )
         task = self.task_service.create_task(
-            kind=kind, args=args, delay=delay, retry_policy=retry_policy
+            args=args, delay=delay, retry_policy=retry_policy
         )
         LOGGER.info("task created: task=%r", task)
         return task

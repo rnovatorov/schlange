@@ -6,10 +6,6 @@ class TooManyAttemptsError(Error):
     pass
 
 
-class TaskLockedError(Error):
-    pass
-
-
 class TaskNotFoundError(Error):
     pass
 
@@ -23,4 +19,12 @@ class TaskNotReadyError(Error):
 
 
 class TaskHandlerNotFound(Error):
+    pass
+
+
+class TaskAlreadyExistsError(Error):
+    pass
+
+
+class TaskUpdatedConcurrentlyError(Error):
     pass

@@ -6,6 +6,7 @@ setuptools.setup(
     description="Persistent task queue built with flock",
     packages=setuptools.find_packages("src"),
     package_dir={"": "src"},
+    package_data={"flockq": ["sqlite/migrations/*.sql"]},
     url="https://github.com/rnovatorov/python-flockq",
     author="Roman Novatorov",
     author_email="roman.novatorov@gmail.com",

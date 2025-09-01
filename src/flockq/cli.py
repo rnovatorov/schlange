@@ -1,7 +1,6 @@
 import argparse
 import json
 import logging
-import pathlib
 import sys
 import threading
 import time
@@ -20,21 +19,20 @@ def main() -> None:
             match args.task_command:
                 case "create":
                     create_task(
-                        data_dir=args.data_dir,
-                        task_kind=args.kind,
+                        url=args.url,
                         args_file=args.args_file,
                         delay=args.delay,
                     )
                 case "inspect":
                     inspect_task(
-                        data_dir=args.data_dir,
+                        url=args.url,
                         task_id=args.task_id,
                     )
                 case _:
                     raise NotImplementedError(args.command)
         case "bench":
             bench(
-                data_dir=args.data_dir,
+                url=args.url,
                 tasks=args.tasks,
                 workers=args.workers,
             )
@@ -42,16 +40,7 @@ def main() -> None:
             raise NotImplementedError(args.command)
 
 
-def bench(data_dir: pathlib.Path, tasks: int, workers: int) -> None:
-    task_kind = "bench"
-
-    q = Flockq.new(data_dir, execution_worker_processes=workers)
-    started_creating_tasks_at = time.time()
-    for i in range(tasks):
-        q.create_task(kind=task_kind, args={}, delay=0)
-    finished_creating_tasks_at = time.time()
-    creating_tasks_took = finished_creating_tasks_at - started_creating_tasks_at
-
+def bench(url: str, tasks: int, workers: int) -> None:
     lock = threading.Lock()
     tasks_handled = 0
     done = threading.Event()
@@ -63,12 +52,20 @@ def bench(data_dir: pathlib.Path, tasks: int, workers: int) -> None:
         if tasks_handled == tasks:
             done.set()
 
-    q.register_task_handler(task_kind="bench", task_handler=handle_task)
-    started_handling_tasks_at = time.time()
-    with q:
-        done.wait()
-    finished_handling_tasks_at = time.time()
-    handling_tasks_took = finished_handling_tasks_at - started_handling_tasks_at
+    with Flockq.new(
+        url, task_handler=handle_task, execution_worker_processes=workers
+    ) as q:
+        started_creating_tasks_at = time.time()
+        for i in range(tasks):
+            q.create_task(args={}, delay=0)
+        finished_creating_tasks_at = time.time()
+        creating_tasks_took = finished_creating_tasks_at - started_creating_tasks_at
+
+        started_handling_tasks_at = time.time()
+        with q:
+            done.wait()
+        finished_handling_tasks_at = time.time()
+        handling_tasks_took = finished_handling_tasks_at - started_handling_tasks_at
 
     print(
         f"creating {tasks} tasks using 1 workers took {creating_tasks_took:.2f} seconds, rate is {tasks/creating_tasks_took:.2f} tasks per second"
@@ -78,27 +75,25 @@ def bench(data_dir: pathlib.Path, tasks: int, workers: int) -> None:
     )
 
 
-def create_task(
-    data_dir: pathlib.Path, task_kind: str, args_file: BinaryIO, delay: float
-) -> None:
-    q = Flockq.new(data_dir)
-    for line in args_file:
-        args = json.loads(line)
-        q.create_task(task_kind, args, delay=delay)
+def create_task(url: str, args_file: BinaryIO, delay: float) -> None:
+    with Flockq.new(url) as q:
+        for line in args_file:
+            args = json.loads(line)
+            q.create_task(args, delay=delay)
 
 
-def inspect_task(data_dir: pathlib.Path, task_id: str) -> None:
-    q = Flockq.new(data_dir)
-    task = q.task(task_id)
-    if task is None:
-        print("not found")
-        exit(1)
-    print(f"id: {task.id}")
-    print(f"args: {task.args}")
-    print(f"ready_at: {task.ready_at}")
-    print(f"state: {task.state}")
-    print(f"executions: {task.executions}")
-    print(f"retry_policy: {task.retry_policy}")
+def inspect_task(url: str, task_id: str) -> None:
+    with Flockq.new(url) as q:
+        task = q.task(task_id)
+        if task is None:
+            print("not found")
+            exit(1)
+        print(f"id: {task.id}")
+        print(f"args: {task.args}")
+        print(f"ready_at: {task.ready_at}")
+        print(f"state: {task.state}")
+        print(f"executions: {task.executions}")
+        print(f"retry_policy: {task.retry_policy}")
 
 
 def configure_logging(level: int):
@@ -117,9 +112,8 @@ def configure_logging(level: int):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="flockq")
     parser.add_argument(
-        "-d",
-        "--data-dir",
-        type=pathlib.Path,
+        "-u",
+        "--url",
         required=True,
     )
     parser.add_argument(

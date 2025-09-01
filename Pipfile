@@ -7,7 +7,7 @@ name = "pypi"
 flockq = {file = ".", editable = true}
 
 [dev-packages]
-types-setuptools = "*"
-mypy = "*"
 black = "*"
 isort = "*"
+mypy = "*"
+types-setuptools = "*"

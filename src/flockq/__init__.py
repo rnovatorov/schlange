@@ -4,7 +4,6 @@ from flockq.core import (
     CleanupPolicy,
     RetryPolicy,
     Task,
-    TaskArgs,
     TaskExecution,
     TaskHandler,
     TaskState,

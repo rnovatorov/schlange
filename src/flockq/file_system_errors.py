@@ -1,2 +1,0 @@
-class TaskFilePathInvalidError(Exception):
-    pass

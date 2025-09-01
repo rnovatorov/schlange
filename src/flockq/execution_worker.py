@@ -52,7 +52,7 @@ class ExecutionWorker(Worker):
         except (
             core.TaskNotActiveError,
             core.TaskNotReadyError,
-            core.TaskLockedError,
+            core.TaskUpdatedConcurrentlyError,
             core.TaskNotFoundError,
         ) as err:
             LOGGER.debug("failed to execute task: id=%s, err=%r", task.id, err)
