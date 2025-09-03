@@ -21,14 +21,22 @@ class TaskService:
     task_repository: TaskRepository
     task_handler: Optional[TaskHandler]
 
-    def create_task(self, args: DTO, delay: float, retry_policy: RetryPolicy) -> Task:
+    def create_task(
+        self,
+        args: DTO,
+        delay: float,
+        retry_policy: RetryPolicy,
+        id: Optional[str] = None,
+    ) -> Task:
         """
         Raises:
             IOError: IO error occurred during the operation.
         """
+        if id is None:
+            id = str(uuid.uuid4())
         task = Task.create(
             now=self._now(),
-            id=str(uuid.uuid4()),
+            id=id,
             args=args,
             delay=delay,
             retry_policy=retry_policy,

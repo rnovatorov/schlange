@@ -93,6 +93,7 @@ class Schlange:
         args: core.DTO,
         delay: float = 0.0,
         retry_policy: Optional[core.RetryPolicy] = None,
+        id: Optional[str] = None,
     ) -> core.Task:
         if retry_policy is None:
             retry_policy = self.retry_policy
@@ -103,7 +104,10 @@ class Schlange:
             retry_policy,
         )
         task = self.task_service.create_task(
-            args=args, delay=delay, retry_policy=retry_policy
+            args=args,
+            delay=delay,
+            retry_policy=retry_policy,
+            id=id,
         )
         LOGGER.info("task created: task=%r", task)
         return task
