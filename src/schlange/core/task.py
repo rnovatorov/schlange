@@ -40,6 +40,9 @@ class Task(Aggregate):
             executions=[],
         )
 
+    def ready(self, now: datetime.datetime) -> bool:
+        return self.ready_at <= now
+
     @property
     def last_execution(self) -> Optional[TaskExecution]:
         return self.executions[-1] if self.executions else None
@@ -47,15 +50,13 @@ class Task(Aggregate):
     def begin_execution(self, now: datetime.datetime) -> None:
         if self.state is not TaskState.ACTIVE:
             raise TaskNotActiveError()
-        if not self.ready_at <= now:
+        if not self.ready(now):
             raise TaskNotReadyError()
         assert self.last_execution is None or self.last_execution.ended
         self.executions.append(TaskExecution.begin(timestamp=now))
 
     def end_execution(self, now: datetime.datetime, error: Optional[str]) -> None:
-        assert self.last_execution is not None
-        assert self.last_execution.begun
-        assert not self.last_execution.ended
+        assert self.last_execution is not None and not self.last_execution.ended
         self.last_execution.end(timestamp=now, error=error)
         if error is None:
             self.state = TaskState.SUCCEEDED

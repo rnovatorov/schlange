@@ -19,10 +19,6 @@ class TaskExecution:
         self.error = error
 
     @property
-    def begun(self) -> bool:
-        return self.begun_at is not None
-
-    @property
     def ended(self) -> bool:
         return self.ended_at is not None
 
