@@ -22,7 +22,7 @@ class ConnectionPool:
             yield cls(conns=conns)
 
     def __init__(self, conns: List[Connection]) -> None:
-        self.semaphore = threading.Semaphore(value=len(conns))
+        self.semaphore = threading.BoundedSemaphore(value=len(conns))
         self.lock = threading.Lock()
         self.conns = conns
 
@@ -31,6 +31,8 @@ class ConnectionPool:
         with self.semaphore:
             with self.lock:
                 conn = self.conns.pop()
-            yield conn
-            with self.lock:
-                self.conns.append(conn)
+            try:
+                yield conn
+            finally:
+                with self.lock:
+                    self.conns.append(conn)

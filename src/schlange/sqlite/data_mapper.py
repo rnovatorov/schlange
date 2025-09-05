@@ -43,6 +43,30 @@ class DataMapper:
             error=dto["error"] if dto.get("error") is not None else None,
         )
 
+    def dump_task_creation(self, creation: core.TaskCreation) -> core.DTO:
+        return {
+            "sequence_number": creation.sequence_number,
+            "begun_at": self.dump_timestamp(creation.begun_at),
+            "ended_at": (
+                self.dump_timestamp(creation.ended_at)
+                if creation.ended_at is not None
+                else None
+            ),
+            "error": creation.error if creation.error is not None else None,
+        }
+
+    def load_task_creation(self, dto: core.DTO) -> core.TaskCreation:
+        return core.TaskCreation(
+            sequence_number=dto["sequence_number"],
+            begun_at=self.load_timestamp(dto["begun_at"]),
+            ended_at=(
+                self.load_timestamp(dto["ended_at"])
+                if dto.get("ended_at") is not None
+                else None
+            ),
+            error=dto["error"] if dto.get("error") is not None else None,
+        )
+
     def load_task_state(self, s: str) -> core.TaskState:
         return core.TaskState(s)
 

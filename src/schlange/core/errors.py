@@ -28,3 +28,31 @@ class TaskAlreadyExistsError(Error):
 
 class TaskUpdatedConcurrentlyError(Error):
     pass
+
+
+class ScheduleNotEnabledError(Error):
+    pass
+
+
+class ScheduleNotReadyError(Error):
+    pass
+
+
+class LastTaskCreationNotEndedYetError(Error):
+    pass
+
+
+class LastTaskCreationAlreadyEndedError(Error):
+    pass
+
+
+class TaskCreationNotBegunYetError(Error):
+    pass
+
+
+class ScheduleAlreadyExistsError(Error):
+    pass
+
+
+class ScheduleNotFoundError(Error):
+    pass

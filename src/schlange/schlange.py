@@ -26,14 +26,18 @@ DEFAULT_CLEANUP_WORKER_INTERVAL = 60
 
 DEFAULT_SQLITE_DATABASE_SYNCHRONOUS_FULL = True
 
+DEFAULT_SCHEDULE_WORKER_INTERVAL = 1
+
 
 @dataclasses.dataclass
 class Schlange:
 
     task_service: core.TaskService
-    retry_policy: core.RetryPolicy
+    default_retry_policy: core.RetryPolicy
+    schedule_service: core.ScheduleService
     execution_worker: background.ExecutionWorker
     cleanup_worker: background.CleanupWorker
+    schedule_worker: background.ScheduleWorker
 
     def __enter__(self) -> "Schlange":
         self.start()
@@ -45,10 +49,12 @@ class Schlange:
     def start(self) -> None:
         self.execution_worker.start()
         self.cleanup_worker.start()
+        self.schedule_worker.start()
 
     def stop(self) -> None:
         self.cleanup_worker.stop()
         self.execution_worker.stop()
+        self.schedule_worker.stop()
 
     @classmethod
     @contextlib.contextmanager
@@ -56,12 +62,13 @@ class Schlange:
         cls,
         url: str,
         task_handler: Optional[core.TaskHandler] = None,
-        retry_policy: core.RetryPolicy = DEFAULT_RETRY_POLICY,
+        default_retry_policy: core.RetryPolicy = DEFAULT_RETRY_POLICY,
         execution_worker_interval: float = DEFAULT_EXECUTION_WORKER_INTERVAL,
         execution_worker_processes: int = DEFAULT_EXECUTION_WORKER_PROCESSES,
         cleanup_policy: core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         sqlite_database_synchronous_full: bool = DEFAULT_SQLITE_DATABASE_SYNCHRONOUS_FULL,
+        schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
     ) -> Generator["Schlange"]:
         with sqlite.Database.open(
             url=url, synchronous_full=sqlite_database_synchronous_full
@@ -70,6 +77,11 @@ class Schlange:
             task_repository = sqlite.TaskRepository(db=db)
             task_service = core.TaskService(
                 task_repository=task_repository, task_handler=task_handler
+            )
+            schedule_repository = sqlite.ScheduleRepository(db=db)
+            schedule_service = core.ScheduleService(
+                schedule_repository=schedule_repository,
+                task_service=task_service,
             )
             execution_worker = background.ExecutionWorker(
                 interval=execution_worker_interval,
@@ -81,11 +93,17 @@ class Schlange:
                 task_service=task_service,
                 cleanup_policy=cleanup_policy,
             )
+            schedule_worker = background.ScheduleWorker(
+                interval=schedule_worker_interval,
+                schedule_service=schedule_service,
+            )
             yield cls(
                 task_service=task_service,
-                retry_policy=retry_policy,
+                default_retry_policy=default_retry_policy,
+                schedule_service=schedule_service,
                 execution_worker=execution_worker,
                 cleanup_worker=cleanup_worker,
+                schedule_worker=schedule_worker,
             )
 
     def create_task(
@@ -96,7 +114,7 @@ class Schlange:
         id: Optional[str] = None,
     ) -> core.Task:
         if retry_policy is None:
-            retry_policy = self.retry_policy
+            retry_policy = self.default_retry_policy
         LOGGER.debug(
             "creating task: args=%s, delay=%f, retry_policy=%r",
             args,
@@ -114,3 +132,35 @@ class Schlange:
 
     def task(self, task_id: str) -> core.Task:
         return self.task_service.task(task_id)
+
+    def create_schedule(
+        self,
+        task_args: core.DTO,
+        interval: float,
+        enabled: bool = True,
+        delay: float = 0.0,
+        retry_policy: Optional[core.RetryPolicy] = None,
+        task_retry_policy: Optional[core.RetryPolicy] = None,
+        id: Optional[str] = None,
+    ) -> core.Schedule:
+        if retry_policy is None:
+            retry_policy = self.default_retry_policy
+        if task_retry_policy is None:
+            task_retry_policy = self.default_retry_policy
+        LOGGER.debug(
+            "creating schedule: interval=%f, enabled=%s, task_args=%r",
+            interval,
+            enabled,
+            task_args,
+        )
+        schedule = self.schedule_service.create_schedule(
+            delay=delay,
+            interval=interval,
+            retry_policy=retry_policy,
+            enabled=enabled,
+            task_args=task_args,
+            task_retry_policy=task_retry_policy,
+            id=id,
+        )
+        LOGGER.info("schedule created: schedule=%r", schedule)
+        return schedule

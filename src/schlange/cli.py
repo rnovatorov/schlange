@@ -36,6 +36,13 @@ def main() -> None:
                 tasks=args.tasks,
                 workers=args.workers,
             )
+        case "stress":
+            stress(
+                url=args.url,
+                schedules=args.schedules,
+                interval=args.interval,
+                workers=args.workers,
+            )
         case _:
             raise NotImplementedError(args.command)
 
@@ -72,6 +79,35 @@ def bench(url: str, tasks: int, workers: int) -> None:
     )
     print(
         f"handling {tasks} tasks using {workers} workers took {handling_tasks_took:.2f} seconds, rate is {tasks/handling_tasks_took:.2f} tasks per second"
+    )
+
+
+def stress(url: str, schedules: int, interval: float, workers: int) -> None:
+    lock = threading.Lock()
+    tasks_handled = 0
+
+    def handle_task(task: core.Task) -> None:
+        nonlocal tasks_handled
+        with lock:
+            tasks_handled += 1
+
+    with Schlange.new(
+        url, task_handler=handle_task, execution_worker_processes=workers
+    ) as queue:
+        for i in range(schedules):
+            queue.create_schedule(task_args={}, interval=interval)
+
+        started_at = time.time()
+        with queue:
+            try:
+                threading.Event().wait()
+            except KeyboardInterrupt:
+                pass
+        finished_at = time.time()
+        duration = finished_at - started_at
+
+    print(
+        f"handling {schedules} schedules each with {interval} interval using {workers} workers took {duration:.2f} seconds, rate is {tasks_handled/duration:.2f} tasks per second"
     )
 
 
@@ -151,6 +187,26 @@ def parse_args() -> argparse.Namespace:
         default=1000,
     )
     bench_parser.add_argument(
+        "-w",
+        "--workers",
+        type=int,
+        default=DEFAULT_EXECUTION_WORKER_PROCESSES,
+    )
+
+    stress_parser = subparsers.add_parser("stress")
+    stress_parser.add_argument(
+        "-s",
+        "--schedules",
+        type=int,
+        default=1,
+    )
+    stress_parser.add_argument(
+        "-i",
+        "--interval",
+        type=float,
+        default=1,
+    )
+    stress_parser.add_argument(
         "-w",
         "--workers",
         type=int,
