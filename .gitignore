@@ -110,6 +110,8 @@ venv.bak/
 
 # Database files
 *.db
+*.db-shm
+*.db-wal
 
 # Pipfile.lock
 Pipfile.lock
