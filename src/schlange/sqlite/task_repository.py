@@ -139,8 +139,8 @@ class TaskRepository:
             if not rows_affected:
                 raise core.TaskNotFoundError()
 
-    def update_task(self, task: core.Task) -> None:
-        with self.db.transaction() as tx:
+    def update_task(self, task: core.Task, synchronous: bool) -> None:
+        with self.db.transaction(synchronous=synchronous) as tx:
             rows_affected = tx.execute(
                 SQL_UPDATE_TASK_BY_ID,
                 {

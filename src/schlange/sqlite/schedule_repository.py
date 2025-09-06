@@ -145,8 +145,8 @@ class ScheduleRepository:
             if not rows_affected:
                 raise core.ScheduleNotFoundError()
 
-    def update_schedule(self, schedule: core.Schedule) -> None:
-        with self.db.transaction() as tx:
+    def update_schedule(self, schedule: core.Schedule, synchronous: bool) -> None:
+        with self.db.transaction(synchronous=synchronous) as tx:
             rows_affected = tx.execute(
                 SQL_UPDATE_SCHEDULE_BY_ID,
                 {

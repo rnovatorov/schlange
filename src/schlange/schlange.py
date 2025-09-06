@@ -24,8 +24,6 @@ DEFAULT_CLEANUP_POLICY = core.CleanupPolicy(
 )
 DEFAULT_CLEANUP_WORKER_INTERVAL = 60
 
-DEFAULT_SQLITE_DATABASE_SYNCHRONOUS_FULL = True
-
 DEFAULT_SCHEDULE_WORKER_INTERVAL = 1
 
 
@@ -67,12 +65,9 @@ class Schlange:
         execution_worker_processes: int = DEFAULT_EXECUTION_WORKER_PROCESSES,
         cleanup_policy: core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
-        sqlite_database_synchronous_full: bool = DEFAULT_SQLITE_DATABASE_SYNCHRONOUS_FULL,
         schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
     ) -> Generator["Schlange"]:
-        with sqlite.Database.open(
-            url=url, synchronous_full=sqlite_database_synchronous_full
-        ) as db:
+        with sqlite.Database.open(url=url) as db:
             db.migrate()
             task_repository = sqlite.TaskRepository(db=db)
             task_service = core.TaskService(

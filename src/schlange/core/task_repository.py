@@ -18,5 +18,5 @@ class TaskRepository(Protocol):
     def delete_task(self, task_id: str) -> None:
         pass
 
-    def update_task(self, task: Task) -> None:
+    def update_task(self, task: Task, synchronous: bool) -> None:
         pass

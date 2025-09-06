@@ -35,7 +35,6 @@ SQL_UPDATE_CURRENT_SCHEMA_VERSION = """
 """
 
 READ_POOL_CAPACITY = 4
-WRITE_POOL_CAPACITY = 1
 DATABASE_MIGRATIONS_PATH = pathlib.Path(__file__).parent / "migrations"
 
 
@@ -43,25 +42,33 @@ class Database:
 
     @classmethod
     @contextlib.contextmanager
-    def open(cls, url: str, synchronous_full: bool) -> Generator["Database"]:
+    def open(cls, url: str) -> Generator["Database"]:
         with contextlib.ExitStack() as stack:
             read_pool = stack.enter_context(
                 ConnectionPool.new(
                     url=url,
-                    synchronous_full=synchronous_full,
+                    synchronous_full=False,
                     capacity=READ_POOL_CAPACITY,
                 )
             )
             write_pool = stack.enter_context(
                 ConnectionPool.new(
                     url=url,
-                    synchronous_full=synchronous_full,
-                    capacity=WRITE_POOL_CAPACITY,
+                    synchronous_full=False,
+                    capacity=1,
+                )
+            )
+            sync_write_pool = stack.enter_context(
+                ConnectionPool.new(
+                    url=url,
+                    synchronous_full=True,
+                    capacity=1,
                 )
             )
             yield cls(
                 read_pool=read_pool,
                 write_pool=write_pool,
+                sync_write_pool=sync_write_pool,
                 migrations_path=DATABASE_MIGRATIONS_PATH,
             )
 
@@ -69,15 +76,23 @@ class Database:
         self,
         read_pool: ConnectionPool,
         write_pool: ConnectionPool,
+        sync_write_pool: ConnectionPool,
         migrations_path: pathlib.Path,
     ) -> None:
         self.read_pool = read_pool
         self.write_pool = write_pool
+        self.sync_write_pool = sync_write_pool
         self.migrations_path = migrations_path
 
     @contextlib.contextmanager
-    def transaction(self, read_only: bool = False) -> Generator[Transaction]:
-        pool = self.read_pool if read_only else self.write_pool
+    def transaction(
+        self, read_only: bool = False, synchronous: bool = True
+    ) -> Generator[Transaction]:
+        pool = (
+            self.read_pool
+            if read_only
+            else self.sync_write_pool if synchronous else self.write_pool
+        )
         with pool.acquire() as conn:
             with conn.transaction(read_only=read_only) as tx:
                 yield tx

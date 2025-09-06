@@ -108,7 +108,7 @@ class TaskService:
         except Exception:
             error = traceback.format_exc()
         task.end_execution(now=self._now(), error=error)
-        self.task_repository.update_task(task)
+        self.task_repository.update_task(task, synchronous=False)
         return task
 
     def _now(self) -> datetime.datetime:

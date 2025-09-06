@@ -68,7 +68,7 @@ class ScheduleService:
         except Exception:
             error = traceback.format_exc()
         schedule.end_task_creation(now=self._now(), error=error)
-        self.schedule_repository.update_schedule(schedule)
+        self.schedule_repository.update_schedule(schedule, synchronous=False)
         return schedule
 
     def _now(self) -> datetime.datetime:

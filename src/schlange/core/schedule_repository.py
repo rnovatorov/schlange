@@ -18,5 +18,5 @@ class ScheduleRepository(Protocol):
     def delete_schedule(self, schedule_id: str) -> None:
         pass
 
-    def update_schedule(self, schedule: Schedule) -> None:
+    def update_schedule(self, schedule: Schedule, synchronous: bool) -> None:
         pass
