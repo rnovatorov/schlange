@@ -1,6 +1,7 @@
 import concurrent.futures
 import logging
 import threading
+from typing import Set
 
 from schlange import core
 
@@ -16,27 +17,45 @@ class ExecutionWorker(Worker):
     ) -> None:
         super().__init__(name="schlange.ExecutionWorker", interval=interval)
         self.task_service = task_service
+        self.lock = threading.Lock()
+        self.executing_tasks: Set[str] = set()
         self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=processes)
-        self.semaphore = threading.BoundedSemaphore(processes)
 
     def stop(self) -> None:
-        self.thread_pool.shutdown(wait=True)
+        self.thread_pool.shutdown(wait=True, cancel_futures=True)
         super().stop()
 
     def work(self) -> None:
-        for task in self.task_service.executable_tasks():
-            self.semaphore.acquire()
-            try:
-                future = self.thread_pool.submit(self._execute_task, task)
-            except RuntimeError:
-                self.semaphore.release()
+        while True:
+            tasks = self.task_service.executable_tasks()
+            submitted = 0
+            for task in tasks:
+                submitted += self._submit_task(task)
+            if not submitted:
                 return
-            future.add_done_callback(lambda _: self.semaphore.release())
 
-    def _execute_task(self, task: core.Task) -> None:
+    def _submit_task(self, task: core.Task) -> bool:
+        with self.lock:
+            if task.id in self.executing_tasks:
+                return False
+            self.executing_tasks.add(task.id)
+
+        def callback():
+            with self.lock:
+                self.executing_tasks.remove(task.id)
+
         try:
-            LOGGER.debug("executing task: id=%s", task.id)
-            task = self.task_service.execute_task(task.id)
+            future = self.thread_pool.submit(self._execute_task, task.id)
+        except RuntimeError:
+            callback()
+            return False
+        future.add_done_callback(lambda _: callback)
+        return True
+
+    def _execute_task(self, task_id: str) -> None:
+        try:
+            LOGGER.debug("executing task: id=%s", task_id)
+            task = self.task_service.execute_task(task_id)
             assert task.last_execution is not None
             assert task.last_execution.duration is not None
             LOGGER.info(

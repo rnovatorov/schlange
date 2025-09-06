@@ -184,7 +184,7 @@ def parse_args() -> argparse.Namespace:
         "-t",
         "--tasks",
         type=int,
-        default=1000,
+        default=5000,
     )
     bench_parser.add_argument(
         "-w",
