@@ -74,7 +74,7 @@ class ScheduleRepository:
                             schedule.created_at
                         ),
                         "ready_at": self.data_mapper.dump_timestamp(schedule.ready_at),
-                        "origin": self.data_mapper.dump_timestamp(schedule.ready_at),
+                        "origin": self.data_mapper.dump_timestamp(schedule.origin),
                         "interval": schedule.interval,
                         "retry_policy": json.dumps(
                             self.data_mapper.dump_retry_policy(schedule.retry_policy)
@@ -154,7 +154,7 @@ class ScheduleRepository:
                     "version": schedule.version,
                     "created_at": self.data_mapper.dump_timestamp(schedule.created_at),
                     "ready_at": self.data_mapper.dump_timestamp(schedule.ready_at),
-                    "origin": self.data_mapper.dump_timestamp(schedule.ready_at),
+                    "origin": self.data_mapper.dump_timestamp(schedule.origin),
                     "interval": schedule.interval,
                     "retry_policy": json.dumps(
                         self.data_mapper.dump_retry_policy(schedule.retry_policy)
