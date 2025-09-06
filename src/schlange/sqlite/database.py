@@ -42,7 +42,7 @@ class Database:
 
     @classmethod
     @contextlib.contextmanager
-    def open(cls, url: str) -> Generator["Database"]:
+    def open(cls, url: str) -> Generator["Database", None, None]:
         with contextlib.ExitStack() as stack:
             read_pool = stack.enter_context(
                 ConnectionPool.new(
@@ -87,7 +87,7 @@ class Database:
     @contextlib.contextmanager
     def transaction(
         self, read_only: bool = False, synchronous: bool = True
-    ) -> Generator[Transaction]:
+    ) -> Generator[Transaction, None, None]:
         pool = (
             self.read_pool
             if read_only

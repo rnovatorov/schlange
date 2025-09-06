@@ -66,7 +66,7 @@ class Schlange:
         cleanup_policy: core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
-    ) -> Generator["Schlange"]:
+    ) -> Generator["Schlange", None, None]:
         with sqlite.Database.open(url=url) as db:
             db.migrate()
             task_repository = sqlite.TaskRepository(db=db)

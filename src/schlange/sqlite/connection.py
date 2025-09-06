@@ -9,7 +9,9 @@ class Connection:
 
     @classmethod
     @contextlib.contextmanager
-    def open(cls, url: str, synchronous_full: bool) -> Generator["Connection"]:
+    def open(
+        cls, url: str, synchronous_full: bool
+    ) -> Generator["Connection", None, None]:
         conn = sqlite3.connect(url, isolation_level=None, check_same_thread=False)
         try:
             # See: https://www.sqlite.org/pragma.html#pragma_journal_mode

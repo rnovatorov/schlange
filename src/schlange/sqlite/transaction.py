@@ -11,7 +11,7 @@ class Transaction:
     @contextlib.contextmanager
     def begin(
         cls, conn: sqlite3.Connection, read_only: bool
-    ) -> Generator["Transaction"]:
+    ) -> Generator["Transaction", None, None]:
         mode = "IMMEDIATE"
         if read_only:
             mode = "DEFERRED"
@@ -28,7 +28,7 @@ class Transaction:
     @contextlib.contextmanager
     def begin_with_script(
         cls, conn: sqlite3.Connection, script: str
-    ) -> Generator["Transaction"]:
+    ) -> Generator["Transaction", None, None]:
         # NOTE: `sqlite3.Cursor.executescript` makes an implicit COMMIT before
         # executing the script if the autocommit is LEGACY_TRANSACTION_CONTROL
         # and there is a pending transaction. Fortunately it does not
@@ -56,7 +56,7 @@ class Transaction:
             raise NoRowsError()
         return row
 
-    def query(self, sql: str, *args, **kwargs) -> Generator[sqlite3.Row]:
+    def query(self, sql: str, *args, **kwargs) -> Generator[sqlite3.Row, None, None]:
         self.cursor.execute(sql, *args, **kwargs)
         while True:
             rows = self.cursor.fetchmany()

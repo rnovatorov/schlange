@@ -11,7 +11,7 @@ class ConnectionPool:
     @contextlib.contextmanager
     def new(
         cls, url: str, synchronous_full: bool, capacity: int
-    ) -> Generator["ConnectionPool"]:
+    ) -> Generator["ConnectionPool", None, None]:
         with contextlib.ExitStack() as stack:
             conns: List[Connection] = []
             for i in range(capacity):
@@ -27,7 +27,7 @@ class ConnectionPool:
         self.conns = conns
 
     @contextlib.contextmanager
-    def acquire(self) -> Generator[Connection]:
+    def acquire(self) -> Generator[Connection, None, None]:
         with self.semaphore:
             with self.lock:
                 conn = self.conns.pop()
