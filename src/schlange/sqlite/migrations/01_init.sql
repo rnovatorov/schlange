@@ -7,8 +7,13 @@ CREATE TABLE tasks (
     ready_at TEXT NOT NULL,
     retry_policy TEXT NOT NULL,
     executions TEXT NOT NULL,
-    last_execution_ended_at TEXT
+    last_execution_ended_at TEXT,
+    schedule_id TEXT
 );
+
+CREATE UNIQUE INDEX idx_schedule_id_where_active ON tasks (schedule_id)
+WHERE
+    state = 'ACTIVE';
 
 CREATE INDEX idx_ready_at_where_active ON tasks (ready_at)
 WHERE

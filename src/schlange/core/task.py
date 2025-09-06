@@ -19,6 +19,7 @@ class Task(Aggregate):
     ready_at: datetime.datetime
     retry_policy: RetryPolicy
     executions: List[TaskExecution]
+    schedule_id: Optional[str]
 
     @classmethod
     def create(
@@ -28,6 +29,7 @@ class Task(Aggregate):
         args: DTO,
         delay: float,
         retry_policy: RetryPolicy,
+        schedule_id: Optional[str],
     ) -> "Task":
         return cls(
             id=id,
@@ -38,6 +40,7 @@ class Task(Aggregate):
             ready_at=now + datetime.timedelta(seconds=delay),
             retry_policy=retry_policy,
             executions=[],
+            schedule_id=schedule_id,
         )
 
     def ready(self, now: datetime.datetime) -> bool:

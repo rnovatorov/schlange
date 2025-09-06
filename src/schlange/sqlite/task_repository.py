@@ -10,19 +10,21 @@ from .errors import NoRowsError
 
 SQL_CREATE_TASK = """
     INSERT INTO tasks (id, version, created_at, args, state, ready_at, retry_policy,
-        executions, last_execution_ended_at)
+        executions, last_execution_ended_at, schedule_id)
     VALUES (:id, :version, :created_at, :args, :state, :ready_at, :retry_policy,
-        :executions, :last_execution_ended_at)
+        :executions, :last_execution_ended_at, :schedule_id)
 """
 
 SQL_GET_TASK_BY_ID = """
-    SELECT id, version, created_at, args, state, ready_at, retry_policy, executions
+    SELECT id, version, created_at, args, state, ready_at, retry_policy, executions,
+        schedule_id
     FROM tasks
     WHERE id = :id
 """
 
 SQL_GET_TASKS_BY_SPEC = """
-    SELECT id, version, created_at, args, state, ready_at, retry_policy, executions
+    SELECT id, version, created_at, args, state, ready_at, retry_policy, executions,
+        schedule_id
     FROM tasks
     WHERE
         coalesce(state = :state, true) AND
@@ -46,7 +48,8 @@ SQL_UPDATE_TASK_BY_ID = """
         ready_at = :ready_at,
         retry_policy = :retry_policy,
         executions = :executions,
-        last_execution_ended_at = :last_execution_ended_at
+        last_execution_ended_at = :last_execution_ended_at,
+        schedule_id = :schedule_id
     WHERE id = :id AND version = :version
 """
 
@@ -86,6 +89,7 @@ class TaskRepository:
                             and task.last_execution.ended_at is not None
                             else None
                         ),
+                        "schedule_id": task.schedule_id,
                     },
                 )
             except sqlite3.IntegrityError:
@@ -131,6 +135,7 @@ class TaskRepository:
             executions=[
                 self.data_mapper.load_task_execution(dto) for dto in json.loads(row[7])
             ],
+            schedule_id=row[8],
         )
 
     def delete_task(self, task_id: str) -> None:
@@ -165,6 +170,7 @@ class TaskRepository:
                         and task.last_execution.ended_at is not None
                         else None
                     ),
+                    "schedule_id": task.schedule_id,
                 },
             )
             if not rows_affected:

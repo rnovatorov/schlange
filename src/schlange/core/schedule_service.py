@@ -62,6 +62,7 @@ class ScheduleService:
                 args=schedule.task_args,
                 delay=0,
                 retry_policy=schedule.task_retry_policy,
+                schedule_id=schedule_id,
             )
         except TaskAlreadyExistsError:
             pass

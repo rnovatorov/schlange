@@ -27,6 +27,7 @@ class TaskService:
         delay: float,
         retry_policy: RetryPolicy,
         id: Optional[str] = None,
+        schedule_id: Optional[str] = None,
     ) -> Task:
         """
         Raises:
@@ -40,6 +41,7 @@ class TaskService:
             args=args,
             delay=delay,
             retry_policy=retry_policy,
+            schedule_id=schedule_id,
         )
         self.task_repository.create_task(task)
         return task
