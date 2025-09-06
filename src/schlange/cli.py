@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+import random
 import sys
 import threading
 import time
@@ -42,6 +43,8 @@ def main() -> None:
                 schedules=args.schedules,
                 interval=args.interval,
                 workers=args.workers,
+                min_task_duration=args.min_task_duration,
+                max_task_duration=args.max_task_duration,
             )
         case _:
             raise NotImplementedError(args.command)
@@ -82,11 +85,20 @@ def bench(url: str, tasks: int, workers: int) -> None:
     )
 
 
-def stress(url: str, schedules: int, interval: float, workers: int) -> None:
+def stress(
+    url: str,
+    schedules: int,
+    interval: float,
+    workers: int,
+    min_task_duration: float,
+    max_task_duration: float,
+) -> None:
     lock = threading.Lock()
     tasks_handled = 0
 
     def handle_task(task: core.Task) -> None:
+        duration = random.random() * (max_task_duration - min_task_duration)
+        time.sleep(duration)
         nonlocal tasks_handled
         with lock:
             tasks_handled += 1
@@ -198,7 +210,7 @@ def parse_args() -> argparse.Namespace:
         "-s",
         "--schedules",
         type=int,
-        default=1,
+        default=10,
     )
     stress_parser.add_argument(
         "-i",
@@ -211,6 +223,16 @@ def parse_args() -> argparse.Namespace:
         "--workers",
         type=int,
         default=DEFAULT_EXECUTION_WORKER_PROCESSES,
+    )
+    stress_parser.add_argument(
+        "--min-task-duration",
+        type=float,
+        default=0,
+    )
+    stress_parser.add_argument(
+        "--max-task-duration",
+        type=float,
+        default=0,
     )
 
     return parser.parse_args()
