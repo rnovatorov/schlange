@@ -159,3 +159,9 @@ class Schlange:
         )
         LOGGER.info("schedule created: schedule=%r", schedule)
         return schedule
+
+    def schedule(self, schedule_id: str) -> core.Schedule:
+        return self.schedule_service.schedule(schedule_id)
+
+    def delete_schedule(self, schedule_id: str) -> None:
+        self.schedule_service.delete_schedule(schedule_id)

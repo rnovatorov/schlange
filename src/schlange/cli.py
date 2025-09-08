@@ -30,7 +30,21 @@ def main() -> None:
                         task_id=args.task_id,
                     )
                 case _:
-                    raise NotImplementedError(args.command)
+                    raise NotImplementedError(args.task_command)
+        case "schedule":
+            match args.schedule_command:
+                case "inspect":
+                    inspect_schedule(
+                        url=args.url,
+                        schedule_id=args.schedule_id,
+                    )
+                case "delete":
+                    delete_schedule(
+                        url=args.url,
+                        schedule_id=args.schedule_id,
+                    )
+                case _:
+                    raise NotImplementedError(args.schedule_command)
         case "bench":
             bench(
                 url=args.url,
@@ -144,6 +158,17 @@ def inspect_task(url: str, task_id: str) -> None:
         print(f"retry_policy: {task.retry_policy}")
 
 
+def inspect_schedule(url: str, schedule_id: str) -> None:
+    with Schlange.new(url) as q:
+        schedule = q.schedule(schedule_id)
+        print(schedule)
+
+
+def delete_schedule(url: str, schedule_id: str) -> None:
+    with Schlange.new(url) as q:
+        q.delete_schedule(schedule_id)
+
+
 def configure_logging(level: int):
     logger = logging.getLogger()
     logger.setLevel(level)
@@ -186,10 +211,16 @@ def parse_args() -> argparse.Namespace:
         default=sys.stdin,
     )
     task_inspect_parser = task_subparsers.add_parser("inspect")
-    task_inspect_parser.add_argument(
-        "task_id",
-        type=str,
+    task_inspect_parser.add_argument("task_id")
+
+    schedule_parser = subparsers.add_parser("schedule")
+    schedule_subparsers = schedule_parser.add_subparsers(
+        dest="schedule_command", required=True
     )
+    schedule_delete_parser = schedule_subparsers.add_parser("delete")
+    schedule_delete_parser.add_argument("schedule_id")
+    schedule_inspect_parser = schedule_subparsers.add_parser("inspect")
+    schedule_inspect_parser.add_argument("schedule_id")
 
     bench_parser = subparsers.add_parser("bench")
     bench_parser.add_argument(

@@ -72,5 +72,11 @@ class ScheduleService:
         self.schedule_repository.update_schedule(schedule, synchronous=False)
         return schedule
 
+    def schedule(self, schedule_id: str) -> Schedule:
+        return self.schedule_repository.get_schedule(schedule_id)
+
+    def delete_schedule(self, schedule_id: str) -> None:
+        self.schedule_repository.delete_schedule(schedule_id)
+
     def _now(self) -> datetime.datetime:
         return datetime.datetime.now(datetime.UTC)

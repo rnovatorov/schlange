@@ -103,7 +103,7 @@ class ScheduleRepository:
             try:
                 row = tx.query_row(SQL_GET_SCHEDULE_BY_ID, {"id": schedule_id})
             except NoRowsError:
-                raise core.ScheduleNotFoundError()
+                raise core.ScheduleNotFoundError() from None
             return self._collect_schedule(row)
 
     def list_schedules(self, spec: core.ScheduleSpecification) -> List[core.Schedule]:
