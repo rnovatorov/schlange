@@ -13,13 +13,13 @@ LOGGER = logging.getLogger(__name__)
 class ExecutionWorker(Worker):
 
     def __init__(
-        self, interval: float, task_service: core.TaskService, processes: int
+        self, interval: float, task_service: core.TaskService, threads: int
     ) -> None:
         super().__init__(name="schlange.ExecutionWorker", interval=interval)
         self.task_service = task_service
         self.lock = threading.Lock()
         self.executing_tasks: Set[str] = set()
-        self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=processes)
+        self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=threads)
 
     def stop(self) -> None:
         self.thread_pool.shutdown(wait=True, cancel_futures=True)

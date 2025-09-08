@@ -18,7 +18,7 @@ DEFAULT_RETRY_POLICY = core.RetryPolicy(
 )
 
 DEFAULT_EXECUTION_WORKER_INTERVAL = 1
-DEFAULT_EXECUTION_WORKER_PROCESSES = os.cpu_count() or 4
+DEFAULT_EXECUTION_WORKER_THREADS = os.cpu_count() or 4
 
 DEFAULT_CLEANUP_POLICY = core.CleanupPolicy(
     delete_succeeded_after=60 * 60 * 24,
@@ -64,7 +64,7 @@ class Schlange:
         task_handler: Optional[core.TaskHandler] = None,
         default_retry_policy: core.RetryPolicy = DEFAULT_RETRY_POLICY,
         execution_worker_interval: float = DEFAULT_EXECUTION_WORKER_INTERVAL,
-        execution_worker_processes: int = DEFAULT_EXECUTION_WORKER_PROCESSES,
+        execution_worker_threads: int = DEFAULT_EXECUTION_WORKER_THREADS,
         cleanup_policy: core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
@@ -83,7 +83,7 @@ class Schlange:
             execution_worker = background.ExecutionWorker(
                 interval=execution_worker_interval,
                 task_service=task_service,
-                processes=execution_worker_processes,
+                threads=execution_worker_threads,
             )
             cleanup_worker = background.CleanupWorker(
                 interval=cleanup_worker_interval,

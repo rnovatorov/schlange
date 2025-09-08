@@ -12,7 +12,7 @@ from schlange import core
 
 from .schlange import (
     DEFAULT_DATABASE_PATH,
-    DEFAULT_EXECUTION_WORKER_PROCESSES,
+    DEFAULT_EXECUTION_WORKER_THREADS,
     Schlange,
 )
 
@@ -82,7 +82,7 @@ def bench(database_path: pathlib.Path, tasks: int, workers: int) -> None:
             done.set()
 
     with Schlange.new(
-        database_path, task_handler=handle_task, execution_worker_processes=workers
+        database_path, task_handler=handle_task, execution_worker_threads=workers
     ) as s:
         started_creating_tasks_at = time.time()
         for i in range(tasks):
@@ -125,7 +125,7 @@ def stress(
     with Schlange.new(
         database_path=database_path,
         task_handler=handle_task,
-        execution_worker_processes=workers,
+        execution_worker_threads=workers,
     ) as s:
         for i in range(schedules):
             s.create_schedule(task_args={}, interval=interval)
@@ -217,14 +217,14 @@ def parse_args() -> argparse.Namespace:
     bench_parser = subparsers.add_parser("bench")
     bench_parser.add_argument("-t", "--tasks", type=int, default=5000)
     bench_parser.add_argument(
-        "-w", "--workers", type=int, default=DEFAULT_EXECUTION_WORKER_PROCESSES
+        "-w", "--workers", type=int, default=DEFAULT_EXECUTION_WORKER_THREADS
     )
 
     stress_parser = subparsers.add_parser("stress")
     stress_parser.add_argument("-s", "--schedules", type=int, default=10)
     stress_parser.add_argument("-i", "--interval", type=float, default=1)
     stress_parser.add_argument(
-        "-w", "--workers", type=int, default=DEFAULT_EXECUTION_WORKER_PROCESSES
+        "-w", "--workers", type=int, default=DEFAULT_EXECUTION_WORKER_THREADS
     )
     stress_parser.add_argument("--min-task-duration", type=float, default=0)
     stress_parser.add_argument(
