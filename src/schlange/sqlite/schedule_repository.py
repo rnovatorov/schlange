@@ -175,4 +175,4 @@ class ScheduleRepository:
                 },
             )
             if not rows_affected:
-                raise core.TaskUpdatedConcurrentlyError()
+                raise core.ScheduleUpdatedConcurrentlyError()

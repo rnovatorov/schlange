@@ -30,6 +30,10 @@ class TaskUpdatedConcurrentlyError(Error):
     pass
 
 
+class ScheduleUpdatedConcurrentlyError(Error):
+    pass
+
+
 class ScheduleNotEnabledError(Error):
     pass
 

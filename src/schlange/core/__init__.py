@@ -9,6 +9,7 @@ from .errors import (
     ScheduleNotEnabledError,
     ScheduleNotFoundError,
     ScheduleNotReadyError,
+    ScheduleUpdatedConcurrentlyError,
     TaskAlreadyExistsError,
     TaskHandlerNotFound,
     TaskNotActiveError,

@@ -44,6 +44,6 @@ class ScheduleWorker(Worker):
             core.ScheduleNotFoundError,
             core.ScheduleNotEnabledError,
             core.ScheduleNotReadyError,
-            core.TaskUpdatedConcurrentlyError,
+            core.ScheduleUpdatedConcurrentlyError,
         ) as err:
             LOGGER.debug("failed to fire schedule: id=%s, err=%r", schedule.id, err)
