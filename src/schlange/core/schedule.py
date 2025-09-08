@@ -6,7 +6,6 @@ from typing import List, Optional
 from .aggregate import Aggregate
 from .dto import DTO
 from .errors import (
-    ScheduleFiringAlreadyEndedError,
     ScheduleFiringNotBegunYetError,
     ScheduleFiringNotEndedYetError,
     ScheduleNotEnabledError,
