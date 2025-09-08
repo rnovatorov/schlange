@@ -1,6 +1,7 @@
 .PHONY: default
 default:
 
+
 .PHONY: lint
 lint: lint-black lint-isort lint-mypy
 
@@ -16,10 +17,20 @@ lint-isort:
 lint-mypy:
 	pipenv run mypy .
 
+
+.PHONY: test
+test: test-examples
+
+.PHONY: test-examples
+test-examples:
+	pipenv run python -m doctest -v examples/*
+
+
 .PHONY: .ci-setup-env
 .ci-setup-env:
 	pip install pipenv
 	pipenv install --dev
+
 
 .PHONY: upload-to-pypi
 upload-to-pypi: dist
