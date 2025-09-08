@@ -10,4 +10,6 @@ schlange-queue = {file = ".", editable = true}
 black = "*"
 isort = "*"
 mypy = "*"
+setuptools = "*"
 types-setuptools = "*"
+twine = "*"
