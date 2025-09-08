@@ -87,10 +87,8 @@ class Schedule(Aggregate):
         )
 
     def end_firing(self, now: datetime.datetime, error: Optional[str]) -> None:
-        if self.last_firing is None:
+        if self.last_firing is None or self.last_firing.ended:
             raise ScheduleFiringNotBegunYetError()
-        if self.last_firing.ended:
-            raise ScheduleFiringAlreadyEndedError()
         self.last_firing.end(timestamp=now, error=error)
         if error is not None:
             try:

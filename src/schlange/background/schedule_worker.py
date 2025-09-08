@@ -37,7 +37,6 @@ class ScheduleWorker(Worker):
             IOError,
             core.ScheduleFiringNotEndedYetError,
             core.ScheduleFiringNotBegunYetError,
-            core.ScheduleFiringAlreadyEndedError,
         ) as err:
             LOGGER.error("failed to fire schedule: id=%s, err=%r", schedule.id, err)
         except (

@@ -98,8 +98,6 @@ class Database:
                 yield tx
 
     def migrate(self) -> None:
-        if self.migrations_path is None:
-            raise FileNotFoundError()
         with self.write_pool.acquire() as conn:
             self._migrate(conn)
 
@@ -110,7 +108,6 @@ class Database:
             schema_version = tx.query_row(SQL_SELECT_CURRENT_SCHEMA_VERSION)[0]
 
         scripts = []
-        assert self.migrations_path is not None
         for path in self.migrations_path.glob("*_*.sql"):
             version = int(path.name.split("_", maxsplit=1)[0])
             if version > schema_version:

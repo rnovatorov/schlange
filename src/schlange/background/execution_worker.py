@@ -64,14 +64,18 @@ class ExecutionWorker(Worker):
                 task.last_execution.duration,
                 task.last_execution.error,
             )
-        except IOError as err:
+        except (
+            IOError,
+            core.TaskExecutionNotEndedYetError,
+            core.TaskExecutionNotBegunYetError,
+        ) as err:
             LOGGER.error("failed to execute task: id=%s, err=%r", task.id, err)
         except core.TaskHandlerNotFound as err:
             LOGGER.warning("failed to execute task: id=%s, err=%r", task.id, err)
         except (
+            core.TaskNotFoundError,
             core.TaskNotActiveError,
             core.TaskNotReadyError,
             core.TaskUpdatedConcurrentlyError,
-            core.TaskNotFoundError,
         ) as err:
             LOGGER.debug("failed to execute task: id=%s, err=%r", task.id, err)

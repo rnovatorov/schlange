@@ -3,7 +3,6 @@ from .dto import DTO
 from .errors import (
     Error,
     ScheduleAlreadyExistsError,
-    ScheduleFiringAlreadyEndedError,
     ScheduleFiringNotBegunYetError,
     ScheduleFiringNotEndedYetError,
     ScheduleNotEnabledError,
@@ -11,6 +10,8 @@ from .errors import (
     ScheduleNotReadyError,
     ScheduleUpdatedConcurrentlyError,
     TaskAlreadyExistsError,
+    TaskExecutionNotBegunYetError,
+    TaskExecutionNotEndedYetError,
     TaskHandlerNotFound,
     TaskNotActiveError,
     TaskNotFoundError,

@@ -30,6 +30,14 @@ class TaskUpdatedConcurrentlyError(Error):
     pass
 
 
+class TaskExecutionNotEndedYetError(Error):
+    pass
+
+
+class TaskExecutionNotBegunYetError(Error):
+    pass
+
+
 class ScheduleUpdatedConcurrentlyError(Error):
     pass
 
@@ -43,10 +51,6 @@ class ScheduleNotReadyError(Error):
 
 
 class ScheduleFiringNotEndedYetError(Error):
-    pass
-
-
-class ScheduleFiringAlreadyEndedError(Error):
     pass
 
 

@@ -4,7 +4,13 @@ from typing import List, Optional
 
 from .aggregate import Aggregate
 from .dto import DTO
-from .errors import TaskNotActiveError, TaskNotReadyError, TooManyAttemptsError
+from .errors import (
+    TaskExecutionNotBegunYetError,
+    TaskExecutionNotEndedYetError,
+    TaskNotActiveError,
+    TaskNotReadyError,
+    TooManyAttemptsError,
+)
 from .retry_policy import RetryPolicy
 from .task_execution import TaskExecution
 from .task_state import TaskState
@@ -55,11 +61,13 @@ class Task(Aggregate):
             raise TaskNotActiveError()
         if not self.ready(now):
             raise TaskNotReadyError()
-        assert self.last_execution is None or self.last_execution.ended
+        if self.last_execution is not None and not self.last_execution.ended:
+            raise TaskExecutionNotEndedYetError()
         self.executions.append(TaskExecution.begin(timestamp=now))
 
     def end_execution(self, now: datetime.datetime, error: Optional[str]) -> None:
-        assert self.last_execution is not None and not self.last_execution.ended
+        if self.last_execution is None or self.last_execution.ended:
+            raise TaskExecutionNotBegunYetError()
         self.last_execution.end(timestamp=now, error=error)
         if error is None:
             self.state = TaskState.SUCCEEDED
