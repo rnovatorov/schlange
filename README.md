@@ -1,5 +1,9 @@
 # 🐍 Schlange
 
+[![CI](https://github.com/rnovatorov/schlange/actions/workflows/ci.yml/badge.svg)](https://github.com/rnovatorov/schlange/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/schlange-queue.svg)](https://pypi.org/project/schlange-queue)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
+
 **Schlange** is a lightweight, persistent, single-node task queue and scheduler
 built on top of SQLite.
 
