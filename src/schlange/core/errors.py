@@ -38,15 +38,15 @@ class ScheduleNotReadyError(Error):
     pass
 
 
-class LastTaskCreationNotEndedYetError(Error):
+class ScheduleFiringNotEndedYetError(Error):
     pass
 
 
-class LastTaskCreationAlreadyEndedError(Error):
+class ScheduleFiringAlreadyEndedError(Error):
     pass
 
 
-class TaskCreationNotBegunYetError(Error):
+class ScheduleFiringNotBegunYetError(Error):
     pass
 
 

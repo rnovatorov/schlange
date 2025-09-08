@@ -25,19 +25,19 @@ class ScheduleWorker(Worker):
         try:
             LOGGER.debug("firing schedule: id=%s", schedule.id)
             schedule = self.schedule_service.fire_schedule(schedule.id)
-            assert schedule.last_task_creation is not None
-            assert schedule.last_task_creation.duration is not None
+            assert schedule.last_firing is not None
+            assert schedule.last_firing.duration is not None
             LOGGER.info(
                 "fired schedule: id=%s, duration=%r, err=%r",
                 schedule.id,
-                schedule.last_task_creation.duration,
-                schedule.last_task_creation.error,
+                schedule.last_firing.duration,
+                schedule.last_firing.error,
             )
         except (
             IOError,
-            core.LastTaskCreationNotEndedYetError,
-            core.TaskCreationNotBegunYetError,
-            core.LastTaskCreationAlreadyEndedError,
+            core.ScheduleFiringNotEndedYetError,
+            core.ScheduleFiringNotBegunYetError,
+            core.ScheduleFiringAlreadyEndedError,
         ) as err:
             LOGGER.error("failed to fire schedule: id=%s, err=%r", schedule.id, err)
         except (

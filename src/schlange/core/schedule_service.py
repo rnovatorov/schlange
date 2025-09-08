@@ -54,7 +54,7 @@ class ScheduleService:
 
     def fire_schedule(self, schedule_id: str) -> Schedule:
         schedule = self.schedule_repository.get_schedule(schedule_id)
-        schedule.begin_task_creation(now=self._now())
+        schedule.begin_firing(now=self._now())
         error: Optional[str] = None
         try:
             _ = self.task_service.create_task(
@@ -68,7 +68,7 @@ class ScheduleService:
             pass
         except Exception:
             error = traceback.format_exc()
-        schedule.end_task_creation(now=self._now(), error=error)
+        schedule.end_firing(now=self._now(), error=error)
         self.schedule_repository.update_schedule(schedule, synchronous=False)
         return schedule
 

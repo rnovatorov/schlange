@@ -11,21 +11,21 @@ from .errors import NoRowsError
 SQL_CREATE_SCHEDULE = """
     INSERT
     INTO schedules (id, version, created_at, ready_at, origin, interval, retry_policy,
-        enabled, task_args, task_retry_policy, task_sequence_number, task_creations)
+        enabled, task_args, task_retry_policy, task_sequence_number, firings)
     VALUES (:id, :version, :created_at, :ready_at, :origin, :interval, :retry_policy,
-        :enabled, :task_args, :task_retry_policy, :task_sequence_number, :task_creations)
+        :enabled, :task_args, :task_retry_policy, :task_sequence_number, :firings)
 """
 
 SQL_GET_SCHEDULE_BY_ID = """
     SELECT id, version, created_at, ready_at, origin, interval, retry_policy,
-        enabled, task_args, task_retry_policy, task_sequence_number, task_creations
+        enabled, task_args, task_retry_policy, task_sequence_number, firings
     FROM schedules
     WHERE id = :id
 """
 
 SQL_GET_SCHEDULES_BY_SPEC = """
     SELECT id, version, created_at, ready_at, origin, interval, retry_policy,
-        enabled, task_args, task_retry_policy, task_sequence_number, task_creations
+        enabled, task_args, task_retry_policy, task_sequence_number, firings
     FROM schedules
     WHERE
         coalesce(enabled = :enabled, true) AND
@@ -51,7 +51,7 @@ SQL_UPDATE_SCHEDULE_BY_ID = """
         task_args = :task_args,
         task_retry_policy = :task_retry_policy,
         task_sequence_number = :task_sequence_number,
-        task_creations = :task_creations
+        firings = :firings
     WHERE id = :id AND version = :version
 """
 
@@ -87,10 +87,10 @@ class ScheduleRepository:
                             )
                         ),
                         "task_sequence_number": schedule.task_sequence_number,
-                        "task_creations": json.dumps(
+                        "firings": json.dumps(
                             [
-                                self.data_mapper.dump_task_creation(creation)
-                                for creation in schedule.task_creations
+                                self.data_mapper.dump_schedule_firing(firing)
+                                for firing in schedule.firings
                             ]
                         ),
                     },
@@ -134,8 +134,9 @@ class ScheduleRepository:
             task_args=json.loads(row[8]),
             task_retry_policy=self.data_mapper.load_retry_policy(json.loads(row[9])),
             task_sequence_number=row[10],
-            task_creations=[
-                self.data_mapper.load_task_creation(dto) for dto in json.loads(row[11])
+            firings=[
+                self.data_mapper.load_schedule_firing(dto)
+                for dto in json.loads(row[11])
             ],
         )
 
@@ -165,10 +166,10 @@ class ScheduleRepository:
                         self.data_mapper.dump_retry_policy(schedule.task_retry_policy)
                     ),
                     "task_sequence_number": schedule.task_sequence_number,
-                    "task_creations": json.dumps(
+                    "firings": json.dumps(
                         [
-                            self.data_mapper.dump_task_creation(creation)
-                            for creation in schedule.task_creations
+                            self.data_mapper.dump_schedule_firing(firing)
+                            for firing in schedule.firings
                         ]
                     ),
                 },

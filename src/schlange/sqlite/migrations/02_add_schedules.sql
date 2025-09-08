@@ -10,7 +10,7 @@ CREATE TABLE schedules (
     task_args TEXT NOT NULL,
     task_retry_policy TEXT NOT NULL,
     task_sequence_number INT NOT NULL,
-    task_creations TEXT NOT NULL
+    firings TEXT NOT NULL
 );
 
 CREATE INDEX idx_ready_at_where_enabled ON schedules (ready_at)
