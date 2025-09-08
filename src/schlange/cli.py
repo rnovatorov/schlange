@@ -9,7 +9,7 @@ from typing import BinaryIO
 
 from schlange import core
 
-from .schlange import DEFAULT_EXECUTION_WORKER_PROCESSES, Schlange
+from .schlange import DEFAULT_EXECUTION_WORKER_PROCESSES, DEFAULT_URL, Schlange
 
 
 def main() -> None:
@@ -78,15 +78,15 @@ def bench(url: str, tasks: int, workers: int) -> None:
 
     with Schlange.new(
         url, task_handler=handle_task, execution_worker_processes=workers
-    ) as q:
+    ) as s:
         started_creating_tasks_at = time.time()
         for i in range(tasks):
-            q.create_task(args={}, delay=0)
+            s.create_task(args={}, delay=0)
         finished_creating_tasks_at = time.time()
         creating_tasks_took = finished_creating_tasks_at - started_creating_tasks_at
 
         started_handling_tasks_at = time.time()
-        with q:
+        with s:
             done.wait()
         finished_handling_tasks_at = time.time()
         handling_tasks_took = finished_handling_tasks_at - started_handling_tasks_at
@@ -119,12 +119,12 @@ def stress(
 
     with Schlange.new(
         url, task_handler=handle_task, execution_worker_processes=workers
-    ) as queue:
+    ) as s:
         for i in range(schedules):
-            queue.create_schedule(task_args={}, interval=interval)
+            s.create_schedule(task_args={}, interval=interval)
 
         started_at = time.time()
-        with queue:
+        with s:
             try:
                 threading.Event().wait()
             except KeyboardInterrupt:
@@ -138,15 +138,15 @@ def stress(
 
 
 def create_task(url: str, args_file: BinaryIO, delay: float) -> None:
-    with Schlange.new(url) as q:
+    with Schlange.new(url) as s:
         for line in args_file:
             args = json.loads(line)
-            q.create_task(args, delay=delay)
+            s.create_task(args, delay=delay)
 
 
 def inspect_task(url: str, task_id: str) -> None:
-    with Schlange.new(url) as q:
-        task = q.task(task_id)
+    with Schlange.new(url) as s:
+        task = s.task(task_id)
         if task is None:
             print("not found")
             exit(1)
@@ -159,14 +159,14 @@ def inspect_task(url: str, task_id: str) -> None:
 
 
 def inspect_schedule(url: str, schedule_id: str) -> None:
-    with Schlange.new(url) as q:
-        schedule = q.schedule(schedule_id)
+    with Schlange.new(url) as s:
+        schedule = s.schedule(schedule_id)
         print(schedule)
 
 
 def delete_schedule(url: str, schedule_id: str) -> None:
-    with Schlange.new(url) as q:
-        q.delete_schedule(schedule_id)
+    with Schlange.new(url) as s:
+        s.delete_schedule(schedule_id)
 
 
 def configure_logging(level: int):
@@ -184,31 +184,16 @@ def configure_logging(level: int):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="schlange")
-    parser.add_argument(
-        "-u",
-        "--url",
-        required=True,
-    )
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-    )
+    parser.add_argument("-u", "--url", default=DEFAULT_URL)
+    parser.add_argument("-v", "--verbose", action="store_true")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     task_parser = subparsers.add_parser("task")
     task_subparsers = task_parser.add_subparsers(dest="task_command", required=True)
     task_create_parser = task_subparsers.add_parser("create")
+    task_create_parser.add_argument("--delay", type=float, default=0)
     task_create_parser.add_argument(
-        "--delay",
-        type=float,
-        default=0,
-    )
-    task_create_parser.add_argument(
-        "args_file",
-        nargs="?",
-        type=argparse.FileType("rb"),
-        default=sys.stdin,
+        "args_file", nargs="?", type=argparse.FileType("rb"), default=sys.stdin
     )
     task_inspect_parser = task_subparsers.add_parser("inspect")
     task_inspect_parser.add_argument("task_id")
@@ -223,43 +208,18 @@ def parse_args() -> argparse.Namespace:
     schedule_inspect_parser.add_argument("schedule_id")
 
     bench_parser = subparsers.add_parser("bench")
+    bench_parser.add_argument("-t", "--tasks", type=int, default=5000)
     bench_parser.add_argument(
-        "-t",
-        "--tasks",
-        type=int,
-        default=5000,
-    )
-    bench_parser.add_argument(
-        "-w",
-        "--workers",
-        type=int,
-        default=DEFAULT_EXECUTION_WORKER_PROCESSES,
+        "-w", "--workers", type=int, default=DEFAULT_EXECUTION_WORKER_PROCESSES
     )
 
     stress_parser = subparsers.add_parser("stress")
+    stress_parser.add_argument("-s", "--schedules", type=int, default=10)
+    stress_parser.add_argument("-i", "--interval", type=float, default=1)
     stress_parser.add_argument(
-        "-s",
-        "--schedules",
-        type=int,
-        default=10,
+        "-w", "--workers", type=int, default=DEFAULT_EXECUTION_WORKER_PROCESSES
     )
-    stress_parser.add_argument(
-        "-i",
-        "--interval",
-        type=float,
-        default=1,
-    )
-    stress_parser.add_argument(
-        "-w",
-        "--workers",
-        type=int,
-        default=DEFAULT_EXECUTION_WORKER_PROCESSES,
-    )
-    stress_parser.add_argument(
-        "--min-task-duration",
-        type=float,
-        default=0,
-    )
+    stress_parser.add_argument("--min-task-duration", type=float, default=0)
     stress_parser.add_argument(
         "--max-task-duration",
         type=float,

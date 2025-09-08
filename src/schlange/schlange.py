@@ -8,6 +8,7 @@ from . import background, core, sqlite
 
 LOGGER = logging.getLogger(__name__)
 
+DEFAULT_URL = "file:schlange.db"
 DEFAULT_RETRY_POLICY = core.RetryPolicy(
     initial_delay=1,
     backoff_factor=2.0,
@@ -58,7 +59,7 @@ class Schlange:
     @contextlib.contextmanager
     def new(
         cls,
-        url: str,
+        url: str = DEFAULT_URL,
         task_handler: Optional[core.TaskHandler] = None,
         default_retry_policy: core.RetryPolicy = DEFAULT_RETRY_POLICY,
         execution_worker_interval: float = DEFAULT_EXECUTION_WORKER_INTERVAL,
