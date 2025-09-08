@@ -1,4 +1,5 @@
 import contextlib
+import pathlib
 import sqlite3
 from typing import ContextManager, Generator
 
@@ -10,9 +11,9 @@ class Connection:
     @classmethod
     @contextlib.contextmanager
     def open(
-        cls, url: str, synchronous_full: bool
+        cls, path: pathlib.Path, synchronous_full: bool
     ) -> Generator["Connection", None, None]:
-        conn = sqlite3.connect(url, isolation_level=None, check_same_thread=False)
+        conn = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
         try:
             # See: https://www.sqlite.org/pragma.html#pragma_journal_mode
             conn.execute("PRAGMA journal_mode = WAL")

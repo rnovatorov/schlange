@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+import pathlib
 import random
 import sys
 import threading
@@ -9,7 +10,11 @@ from typing import BinaryIO
 
 from schlange import core
 
-from .schlange import DEFAULT_EXECUTION_WORKER_PROCESSES, DEFAULT_URL, Schlange
+from .schlange import (
+    DEFAULT_DATABASE_PATH,
+    DEFAULT_EXECUTION_WORKER_PROCESSES,
+    Schlange,
+)
 
 
 def main() -> None:
@@ -20,13 +25,13 @@ def main() -> None:
             match args.task_command:
                 case "create":
                     create_task(
-                        url=args.url,
+                        database_path=args.database_path,
                         args_file=args.args_file,
                         delay=args.delay,
                     )
                 case "inspect":
                     inspect_task(
-                        url=args.url,
+                        database_path=args.database_path,
                         task_id=args.task_id,
                     )
                 case _:
@@ -35,25 +40,25 @@ def main() -> None:
             match args.schedule_command:
                 case "inspect":
                     inspect_schedule(
-                        url=args.url,
+                        database_path=args.database_path,
                         schedule_id=args.schedule_id,
                     )
                 case "delete":
                     delete_schedule(
-                        url=args.url,
+                        database_path=args.database_path,
                         schedule_id=args.schedule_id,
                     )
                 case _:
                     raise NotImplementedError(args.schedule_command)
         case "bench":
             bench(
-                url=args.url,
+                database_path=args.database_path,
                 tasks=args.tasks,
                 workers=args.workers,
             )
         case "stress":
             stress(
-                url=args.url,
+                database_path=args.database_path,
                 schedules=args.schedules,
                 interval=args.interval,
                 workers=args.workers,
@@ -64,7 +69,7 @@ def main() -> None:
             raise NotImplementedError(args.command)
 
 
-def bench(url: str, tasks: int, workers: int) -> None:
+def bench(database_path: pathlib.Path, tasks: int, workers: int) -> None:
     lock = threading.Lock()
     tasks_handled = 0
     done = threading.Event()
@@ -77,7 +82,7 @@ def bench(url: str, tasks: int, workers: int) -> None:
             done.set()
 
     with Schlange.new(
-        url, task_handler=handle_task, execution_worker_processes=workers
+        database_path, task_handler=handle_task, execution_worker_processes=workers
     ) as s:
         started_creating_tasks_at = time.time()
         for i in range(tasks):
@@ -100,7 +105,7 @@ def bench(url: str, tasks: int, workers: int) -> None:
 
 
 def stress(
-    url: str,
+    database_path: pathlib.Path,
     schedules: int,
     interval: float,
     workers: int,
@@ -118,7 +123,9 @@ def stress(
             tasks_handled += 1
 
     with Schlange.new(
-        url, task_handler=handle_task, execution_worker_processes=workers
+        database_path=database_path,
+        task_handler=handle_task,
+        execution_worker_processes=workers,
     ) as s:
         for i in range(schedules):
             s.create_schedule(task_args={}, interval=interval)
@@ -137,15 +144,15 @@ def stress(
     )
 
 
-def create_task(url: str, args_file: BinaryIO, delay: float) -> None:
-    with Schlange.new(url) as s:
+def create_task(database_path: pathlib.Path, args_file: BinaryIO, delay: float) -> None:
+    with Schlange.new(database_path) as s:
         for line in args_file:
             args = json.loads(line)
             s.create_task(args, delay=delay)
 
 
-def inspect_task(url: str, task_id: str) -> None:
-    with Schlange.new(url) as s:
+def inspect_task(database_path: pathlib.Path, task_id: str) -> None:
+    with Schlange.new(database_path) as s:
         task = s.task(task_id)
         if task is None:
             print("not found")
@@ -158,14 +165,14 @@ def inspect_task(url: str, task_id: str) -> None:
         print(f"retry_policy: {task.retry_policy}")
 
 
-def inspect_schedule(url: str, schedule_id: str) -> None:
-    with Schlange.new(url) as s:
+def inspect_schedule(database_path: pathlib.Path, schedule_id: str) -> None:
+    with Schlange.new(database_path) as s:
         schedule = s.schedule(schedule_id)
         print(schedule)
 
 
-def delete_schedule(url: str, schedule_id: str) -> None:
-    with Schlange.new(url) as s:
+def delete_schedule(database_path: pathlib.Path, schedule_id: str) -> None:
+    with Schlange.new(database_path) as s:
         s.delete_schedule(schedule_id)
 
 
@@ -184,7 +191,7 @@ def configure_logging(level: int):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="schlange")
-    parser.add_argument("-u", "--url", default=DEFAULT_URL)
+    parser.add_argument("-d", "--database-path", default=DEFAULT_DATABASE_PATH)
     parser.add_argument("-v", "--verbose", action="store_true")
     subparsers = parser.add_subparsers(dest="command", required=True)
 

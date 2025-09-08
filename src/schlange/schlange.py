@@ -2,13 +2,14 @@ import contextlib
 import dataclasses
 import logging
 import os
+import pathlib
 from typing import Generator, Optional
 
 from . import background, core, sqlite
 
 LOGGER = logging.getLogger(__name__)
 
-DEFAULT_URL = "file:schlange.db"
+DEFAULT_DATABASE_PATH = pathlib.Path("schlange.db")
 DEFAULT_RETRY_POLICY = core.RetryPolicy(
     initial_delay=1,
     backoff_factor=2.0,
@@ -59,7 +60,7 @@ class Schlange:
     @contextlib.contextmanager
     def new(
         cls,
-        url: str = DEFAULT_URL,
+        database_path: pathlib.Path = DEFAULT_DATABASE_PATH,
         task_handler: Optional[core.TaskHandler] = None,
         default_retry_policy: core.RetryPolicy = DEFAULT_RETRY_POLICY,
         execution_worker_interval: float = DEFAULT_EXECUTION_WORKER_INTERVAL,
@@ -68,7 +69,7 @@ class Schlange:
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
     ) -> Generator["Schlange", None, None]:
-        with sqlite.Database.open(url=url) as db:
+        with sqlite.Database.open(path=database_path) as db:
             db.migrate()
             task_repository = sqlite.TaskRepository(db=db)
             task_service = core.TaskService(

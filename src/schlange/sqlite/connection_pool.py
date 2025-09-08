@@ -1,4 +1,5 @@
 import contextlib
+import pathlib
 import threading
 from typing import Generator, List
 
@@ -10,13 +11,13 @@ class ConnectionPool:
     @classmethod
     @contextlib.contextmanager
     def new(
-        cls, url: str, synchronous_full: bool, capacity: int
+        cls, path: pathlib.Path, synchronous_full: bool, capacity: int
     ) -> Generator["ConnectionPool", None, None]:
         with contextlib.ExitStack() as stack:
             conns: List[Connection] = []
             for i in range(capacity):
                 conn = stack.enter_context(
-                    Connection.open(url=url, synchronous_full=synchronous_full)
+                    Connection.open(path=path, synchronous_full=synchronous_full)
                 )
                 conns.append(conn)
             yield cls(conns=conns)

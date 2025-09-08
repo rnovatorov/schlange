@@ -42,25 +42,25 @@ class Database:
 
     @classmethod
     @contextlib.contextmanager
-    def open(cls, url: str) -> Generator["Database", None, None]:
+    def open(cls, path: pathlib.Path) -> Generator["Database", None, None]:
         with contextlib.ExitStack() as stack:
             read_pool = stack.enter_context(
                 ConnectionPool.new(
-                    url=url,
+                    path=path,
                     synchronous_full=False,
                     capacity=READ_POOL_CAPACITY,
                 )
             )
             write_pool = stack.enter_context(
                 ConnectionPool.new(
-                    url=url,
+                    path=path,
                     synchronous_full=False,
                     capacity=1,
                 )
             )
             sync_write_pool = stack.enter_context(
                 ConnectionPool.new(
-                    url=url,
+                    path=path,
                     synchronous_full=True,
                     capacity=1,
                 )
