@@ -45,12 +45,15 @@ class ScheduleService:
         return schedule
 
     def fireable_schedules(self) -> List[Schedule]:
-        return self.schedule_repository.list_schedules(
+        return self.list_schedules(
             ScheduleSpecification(
                 enabled=True,
                 ready_as_of=self._now(),
             )
         )
+
+    def list_schedules(self, spec: ScheduleSpecification) -> List[Schedule]:
+        return self.schedule_repository.list_schedules(spec)
 
     def fire_schedule(self, schedule_id: str) -> Schedule:
         schedule = self.schedule_repository.get_schedule(schedule_id)

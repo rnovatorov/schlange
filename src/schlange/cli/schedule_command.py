@@ -3,6 +3,7 @@ import argparse
 from .command import Command
 from .schedule_delete_command import ScheduleDeleteCommand
 from .schedule_inspect_command import ScheduleInspectCommand
+from .schedule_list_command import ScheduleListCommand
 from .subparsers import Subparsers
 
 
@@ -19,6 +20,7 @@ class ScheduleCommand(Command):
         for command in [
             ScheduleDeleteCommand,
             ScheduleInspectCommand,
+            ScheduleListCommand,
         ]:
             command.register(schedule_subparsers)
 
@@ -29,5 +31,7 @@ class ScheduleCommand(Command):
                 ScheduleDeleteCommand.run(args)
             case "inspect":
                 ScheduleInspectCommand.run(args)
+            case "list":
+                ScheduleListCommand.run(args)
             case _:
                 raise NotImplementedError(args.schedule_command)

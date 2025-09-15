@@ -175,6 +175,11 @@ class Schlange:
     def schedule(self, schedule_id: str) -> core.Schedule:
         return self.schedule_service.schedule(schedule_id)
 
+    def schedules(self, enabled: Optional[bool] = None) -> List[core.Schedule]:
+        return self.schedule_service.list_schedules(
+            core.ScheduleSpecification(enabled=enabled)
+        )
+
     def delete_schedule(self, schedule_id: str) -> None:
         self.schedule_service.delete_schedule(schedule_id)
 
