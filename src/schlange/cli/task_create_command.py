@@ -5,6 +5,7 @@ import sys
 import schlange
 
 from .command import Command
+from .data_mapper import DataMapper
 from .subparsers import Subparsers
 
 
@@ -52,6 +53,7 @@ class TaskCreateCommand(Command):
 
     @staticmethod
     def run(args: argparse.Namespace) -> None:
+        data_mapper = DataMapper()
         with schlange.new(args.database_path) as sch:
             for line in args.args_file:
                 task_args = json.loads(line)
@@ -61,4 +63,8 @@ class TaskCreateCommand(Command):
                     max_delay=args.retry_policy_max_delay,
                     max_attempts=args.retry_policy_max_attempts,
                 )
-                sch.create_task(task_args, delay=args.delay, retry_policy=retry_policy)
+                task = sch.create_task(
+                    task_args, delay=args.delay, retry_policy=retry_policy
+                )
+                dto = data_mapper.dump_task(task)
+                print(json.dumps(dto, indent=4))

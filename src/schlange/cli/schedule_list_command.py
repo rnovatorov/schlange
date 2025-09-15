@@ -1,8 +1,10 @@
 import argparse
+import json
 
 import schlange
 
 from .command import Command
+from .data_mapper import DataMapper
 from .subparsers import Subparsers
 
 
@@ -19,9 +21,10 @@ class ScheduleListCommand(Command):
 
     @staticmethod
     def run(args: argparse.Namespace) -> None:
+        data_mapper = DataMapper()
         with schlange.new(args.database_path) as sch:
             for schedule in sch.schedules(
                 enabled=True if args.enabled else False if args.disabled else None
             ):
-                print(f"id: {schedule.id}")
-                print(f"task_sequence_number: {schedule.task_sequence_number}")
+                dto = data_mapper.dump_schedule(schedule)
+                print(json.dumps(dto, indent=4))

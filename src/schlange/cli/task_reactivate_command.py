@@ -1,8 +1,10 @@
 import argparse
+import json
 
 import schlange
 
 from .command import Command
+from .data_mapper import DataMapper
 from .subparsers import Subparsers
 
 
@@ -17,5 +19,8 @@ class TaskReactivateCommand(Command):
 
     @staticmethod
     def run(args: argparse.Namespace) -> None:
+        data_mapper = DataMapper()
         with schlange.new(args.database_path) as sch:
-            sch.reactivate_task(args.task_id)
+            task = sch.reactivate_task(args.task_id)
+            dto = data_mapper.dump_task(task)
+            print(json.dumps(dto, indent=4))

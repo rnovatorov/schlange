@@ -1,8 +1,10 @@
 import argparse
+import json
 
 import schlange
 
 from .command import Command
+from .data_mapper import DataMapper
 from .subparsers import Subparsers
 
 
@@ -22,7 +24,8 @@ class TaskListCommand(Command):
 
     @staticmethod
     def run(args: argparse.Namespace) -> None:
+        data_mapper = DataMapper()
         with schlange.new(args.database_path) as sch:
             for task in sch.tasks(state=args.state):
-                print(f"id: {task.id}")
-                print(f"state: {task.state}")
+                dto = data_mapper.dump_task(task)
+                print(json.dumps(dto, indent=4))
