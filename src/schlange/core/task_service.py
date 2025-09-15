@@ -120,5 +120,17 @@ class TaskService:
         self.task_repository.update_task(task, synchronous=False)
         return task
 
+    def reactivate_task(self, task_id: str, delay: float) -> Task:
+        """
+        Raises:
+            IOError: IO error occurred during the operation.
+            TaskNotFoundError: Task was not found.
+            TaskNotFailedError: Task is not in failed state.
+        """
+        task = self.task_repository.get_task(task_id)
+        task.reactivate(now=self._now(), delay=delay)
+        self.task_repository.update_task(task, synchronous=True)
+        return task
+
     def _now(self) -> datetime.datetime:
         return datetime.datetime.now(datetime.UTC)

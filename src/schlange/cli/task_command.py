@@ -6,6 +6,7 @@ from .task_create_command import TaskCreateCommand
 from .task_delete_command import TaskDeleteCommand
 from .task_inspect_command import TaskInspectCommand
 from .task_list_command import TaskListCommand
+from .task_reactivate_command import TaskReactivateCommand
 
 
 class TaskCommand(Command):
@@ -21,6 +22,7 @@ class TaskCommand(Command):
             TaskInspectCommand,
             TaskListCommand,
             TaskDeleteCommand,
+            TaskReactivateCommand,
         ]:
             command.register(task_subparsers)
 
@@ -35,5 +37,7 @@ class TaskCommand(Command):
                 TaskListCommand.run(args)
             case "delete":
                 TaskDeleteCommand.run(args)
+            case "reactivate":
+                TaskReactivateCommand.run(args)
             case _:
                 raise NotImplementedError(args.task_command)

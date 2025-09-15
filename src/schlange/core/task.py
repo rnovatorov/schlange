@@ -8,6 +8,7 @@ from .errors import (
     TaskExecutionNotBegunYetError,
     TaskExecutionNotEndedYetError,
     TaskNotActiveError,
+    TaskNotFailedError,
     TaskNotReadyError,
     TooManyAttemptsError,
 )
@@ -77,3 +78,10 @@ class Task(Aggregate):
             self.ready_at = now + datetime.timedelta(seconds=delay)
         except TooManyAttemptsError:
             self.state = TaskState.FAILED
+
+    def reactivate(self, now: datetime.datetime, delay: float) -> None:
+        if self.state != TaskState.FAILED:
+            raise TaskNotFailedError()
+        self.state = TaskState.ACTIVE
+        self.ready_at = now + datetime.timedelta(seconds=delay)
+        self.executions = []

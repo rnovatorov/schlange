@@ -38,6 +38,10 @@ class TaskExecutionNotBegunYetError(Error):
     pass
 
 
+class TaskNotFailedError(Error):
+    pass
+
+
 class ScheduleUpdatedConcurrentlyError(Error):
     pass
 

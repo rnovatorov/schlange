@@ -137,6 +137,9 @@ class Schlange:
         spec = core.TaskSpecification(state=state)
         return self.task_service.list_tasks(spec=spec)
 
+    def reactivate_task(self, task_id: str, delay: float = 0) -> core.Task:
+        return self.task_service.reactivate_task(task_id=task_id, delay=delay)
+
     def create_schedule(
         self,
         task_args: core.DTO,
