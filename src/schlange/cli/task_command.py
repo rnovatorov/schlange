@@ -4,6 +4,7 @@ from .command import Command
 from .subparsers import Subparsers
 from .task_create_command import TaskCreateCommand
 from .task_inspect_command import TaskInspectCommand
+from .task_list_command import TaskListCommand
 
 
 class TaskCommand(Command):
@@ -17,6 +18,7 @@ class TaskCommand(Command):
         for command in [
             TaskCreateCommand,
             TaskInspectCommand,
+            TaskListCommand,
         ]:
             command.register(task_subparsers)
 
@@ -27,5 +29,7 @@ class TaskCommand(Command):
                 TaskCreateCommand.run(args)
             case "inspect":
                 TaskInspectCommand.run(args)
+            case "list":
+                TaskListCommand.run(args)
             case _:
                 raise NotImplementedError(args.task_command)

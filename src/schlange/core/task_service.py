@@ -86,9 +86,16 @@ class TaskService:
         Raises:
             IOError: IO error occurred during the operation.
         """
-        return self.task_repository.list_tasks(
+        return self.list_tasks(
             TaskSpecification(state=TaskState.ACTIVE, ready_as_of=self._now()),
         )
+
+    def list_tasks(self, spec: TaskSpecification) -> List[Task]:
+        """
+        Raises:
+            IOError: IO error occurred during the operation.
+        """
+        return self.task_repository.list_tasks(spec)
 
     def execute_task(self, task_id: str) -> Task:
         """
