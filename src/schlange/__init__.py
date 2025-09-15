@@ -1,6 +1,6 @@
 import logging
 
-from schlange.core import (
+from .core import (
     DTO,
     CleanupPolicy,
     RetryPolicy,
@@ -10,7 +10,6 @@ from schlange.core import (
     TaskHandler,
     TaskState,
 )
-
 from .schlange import (
     DEFAULT_DATABASE_PATH,
     DEFAULT_EXECUTION_WORKER_THREADS,
