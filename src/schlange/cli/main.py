@@ -8,13 +8,7 @@ import threading
 import time
 from typing import BinaryIO
 
-from schlange import core
-
-from .schlange import (
-    DEFAULT_DATABASE_PATH,
-    DEFAULT_EXECUTION_WORKER_THREADS,
-    Schlange,
-)
+import schlange
 
 
 def main() -> None:
@@ -74,24 +68,24 @@ def bench(database_path: pathlib.Path, tasks: int, workers: int) -> None:
     tasks_handled = 0
     done = threading.Event()
 
-    def handle_task(task: core.Task) -> None:
+    def handle_task(task: schlange.Task) -> None:
         nonlocal tasks_handled
         with lock:
             tasks_handled += 1
         if tasks_handled == tasks:
             done.set()
 
-    with Schlange.new(
+    with schlange.new(
         database_path, task_handler=handle_task, execution_worker_threads=workers
-    ) as s:
+    ) as sch:
         started_creating_tasks_at = time.time()
         for i in range(tasks):
-            s.create_task(args={}, delay=0)
+            sch.create_task(args={}, delay=0)
         finished_creating_tasks_at = time.time()
         creating_tasks_took = finished_creating_tasks_at - started_creating_tasks_at
 
         started_handling_tasks_at = time.time()
-        with s:
+        with sch:
             done.wait()
         finished_handling_tasks_at = time.time()
         handling_tasks_took = finished_handling_tasks_at - started_handling_tasks_at
@@ -115,23 +109,23 @@ def stress(
     lock = threading.Lock()
     tasks_handled = 0
 
-    def handle_task(task: core.Task) -> None:
+    def handle_task(task: schlange.Task) -> None:
         duration = random.random() * (max_task_duration - min_task_duration)
         time.sleep(duration)
         nonlocal tasks_handled
         with lock:
             tasks_handled += 1
 
-    with Schlange.new(
+    with schlange.new(
         database_path=database_path,
         task_handler=handle_task,
         execution_worker_threads=workers,
-    ) as s:
+    ) as sch:
         for i in range(schedules):
-            s.create_schedule(task_args={}, interval=interval)
+            sch.create_schedule(task_args={}, interval=interval)
 
         started_at = time.time()
-        with s:
+        with sch:
             try:
                 threading.Event().wait()
             except KeyboardInterrupt:
@@ -145,15 +139,15 @@ def stress(
 
 
 def create_task(database_path: pathlib.Path, args_file: BinaryIO, delay: float) -> None:
-    with Schlange.new(database_path) as s:
+    with schlange.new(database_path) as sch:
         for line in args_file:
             args = json.loads(line)
-            s.create_task(args, delay=delay)
+            sch.create_task(args, delay=delay)
 
 
 def inspect_task(database_path: pathlib.Path, task_id: str) -> None:
-    with Schlange.new(database_path) as s:
-        task = s.task(task_id)
+    with schlange.new(database_path) as sch:
+        task = sch.task(task_id)
         if task is None:
             print("not found")
             exit(1)
@@ -166,14 +160,14 @@ def inspect_task(database_path: pathlib.Path, task_id: str) -> None:
 
 
 def inspect_schedule(database_path: pathlib.Path, schedule_id: str) -> None:
-    with Schlange.new(database_path) as s:
-        schedule = s.schedule(schedule_id)
+    with schlange.new(database_path) as sch:
+        schedule = sch.schedule(schedule_id)
         print(schedule)
 
 
 def delete_schedule(database_path: pathlib.Path, schedule_id: str) -> None:
-    with Schlange.new(database_path) as s:
-        s.delete_schedule(schedule_id)
+    with schlange.new(database_path) as sch:
+        sch.delete_schedule(schedule_id)
 
 
 def configure_logging(level: int):
@@ -190,8 +184,10 @@ def configure_logging(level: int):
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="schlange")
-    parser.add_argument("-d", "--database-path", default=DEFAULT_DATABASE_PATH)
+    parser = argparse.ArgumentParser(
+        prog="schlange", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument("-d", "--database-path", default=schlange.DEFAULT_DATABASE_PATH)
     parser.add_argument("-v", "--verbose", action="store_true")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -217,14 +213,14 @@ def parse_args() -> argparse.Namespace:
     bench_parser = subparsers.add_parser("bench")
     bench_parser.add_argument("-t", "--tasks", type=int, default=5000)
     bench_parser.add_argument(
-        "-w", "--workers", type=int, default=DEFAULT_EXECUTION_WORKER_THREADS
+        "-w", "--workers", type=int, default=schlange.DEFAULT_EXECUTION_WORKER_THREADS
     )
 
     stress_parser = subparsers.add_parser("stress")
     stress_parser.add_argument("-s", "--schedules", type=int, default=10)
     stress_parser.add_argument("-i", "--interval", type=float, default=1)
     stress_parser.add_argument(
-        "-w", "--workers", type=int, default=DEFAULT_EXECUTION_WORKER_THREADS
+        "-w", "--workers", type=int, default=schlange.DEFAULT_EXECUTION_WORKER_THREADS
     )
     stress_parser.add_argument("--min-task-duration", type=float, default=0)
     stress_parser.add_argument(

@@ -1,3 +1,3 @@
-from .cli import main
+from schlange import cli
 
-main()
+cli.main()

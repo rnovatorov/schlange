@@ -11,12 +11,19 @@ from schlange.core import (
     TaskState,
 )
 
-from .schlange import Schlange
+from .schlange import (
+    DEFAULT_DATABASE_PATH,
+    DEFAULT_EXECUTION_WORKER_THREADS,
+    Schlange,
+    new,
+)
 
 logging.getLogger(__name__).handlers = [logging.NullHandler()]
 
 __all__ = [
     "CleanupPolicy",
+    "DEFAULT_DATABASE_PATH",
+    "DEFAULT_EXECUTION_WORKER_THREADS",
     "DTO",
     "RetryPolicy",
     "Schedule",
@@ -26,4 +33,5 @@ __all__ = [
     "TaskExecution",
     "TaskHandler",
     "TaskState",
+    "new",
 ]

@@ -167,3 +167,6 @@ class Schlange:
 
     def delete_schedule(self, schedule_id: str) -> None:
         self.schedule_service.delete_schedule(schedule_id)
+
+
+new = Schlange.new
