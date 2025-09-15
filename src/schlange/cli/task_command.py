@@ -3,6 +3,7 @@ import argparse
 from .command import Command
 from .subparsers import Subparsers
 from .task_create_command import TaskCreateCommand
+from .task_delete_command import TaskDeleteCommand
 from .task_inspect_command import TaskInspectCommand
 from .task_list_command import TaskListCommand
 
@@ -19,6 +20,7 @@ class TaskCommand(Command):
             TaskCreateCommand,
             TaskInspectCommand,
             TaskListCommand,
+            TaskDeleteCommand,
         ]:
             command.register(task_subparsers)
 
@@ -31,5 +33,7 @@ class TaskCommand(Command):
                 TaskInspectCommand.run(args)
             case "list":
                 TaskListCommand.run(args)
+            case "delete":
+                TaskDeleteCommand.run(args)
             case _:
                 raise NotImplementedError(args.task_command)

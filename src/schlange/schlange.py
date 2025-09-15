@@ -130,6 +130,9 @@ class Schlange:
     def task(self, task_id: str) -> core.Task:
         return self.task_service.task(task_id)
 
+    def delete_task(self, task_id: str) -> None:
+        self.task_service.delete_task(task_id)
+
     def tasks(self, state: Optional[core.TaskState] = None) -> List[core.Task]:
         spec = core.TaskSpecification(state=state)
         return self.task_service.list_tasks(spec=spec)
