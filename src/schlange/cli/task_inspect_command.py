@@ -10,7 +10,9 @@ class TaskInspectCommand(Command):
 
     @staticmethod
     def register(task_subparsers: Subparsers) -> None:
-        task_inspect_parser = task_subparsers.add_parser("inspect")
+        task_inspect_parser = task_subparsers.add_parser(
+            "inspect", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
         task_inspect_parser.add_argument("task_id")
 
     @staticmethod

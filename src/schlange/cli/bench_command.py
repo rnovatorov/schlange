@@ -12,13 +12,18 @@ class BenchCommand(Command):
 
     @staticmethod
     def register(subparsers: Subparsers) -> None:
-        bench_parser = subparsers.add_parser("bench")
-        bench_parser.add_argument("-t", "--tasks", type=int, default=5000)
+        bench_parser = subparsers.add_parser(
+            "bench", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        bench_parser.add_argument(
+            "-t", "--tasks", type=int, default=5000, help="number of tasks to create"
+        )
         bench_parser.add_argument(
             "-w",
             "--workers",
             type=int,
             default=schlange.DEFAULT_EXECUTION_WORKER_THREADS,
+            help="number of concurrent execution workers",
         )
 
     @staticmethod

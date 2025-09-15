@@ -10,7 +10,9 @@ class ScheduleDeleteCommand(Command):
 
     @staticmethod
     def register(schedule_subparsers: Subparsers) -> None:
-        schedule_delete_parser = schedule_subparsers.add_parser("delete")
+        schedule_delete_parser = schedule_subparsers.add_parser(
+            "delete", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
         schedule_delete_parser.add_argument("schedule_id")
 
     @staticmethod

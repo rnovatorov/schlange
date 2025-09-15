@@ -13,20 +13,41 @@ class StressCommand(Command):
 
     @staticmethod
     def register(subparsers: Subparsers) -> None:
-        stress_parser = subparsers.add_parser("stress")
-        stress_parser.add_argument("-s", "--schedules", type=int, default=10)
-        stress_parser.add_argument("-i", "--interval", type=float, default=1)
+        stress_parser = subparsers.add_parser(
+            "stress", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        stress_parser.add_argument(
+            "-s",
+            "--schedules",
+            type=int,
+            default=10,
+            help="number of schedules to create",
+        )
+        stress_parser.add_argument(
+            "-i",
+            "--interval",
+            type=float,
+            default=1,
+            help="interval of created schedules",
+        )
         stress_parser.add_argument(
             "-w",
             "--workers",
             type=int,
             default=schlange.DEFAULT_EXECUTION_WORKER_THREADS,
+            help="number of concurrent execution workers",
         )
-        stress_parser.add_argument("--min-task-duration", type=float, default=0)
+        stress_parser.add_argument(
+            "--min-task-duration",
+            type=float,
+            default=0,
+            help="minimal duration of a task",
+        )
         stress_parser.add_argument(
             "--max-task-duration",
             type=float,
             default=0,
+            help="maximal duration of a task",
         )
 
     @staticmethod

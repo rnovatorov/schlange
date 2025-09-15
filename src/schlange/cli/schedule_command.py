@@ -10,7 +10,9 @@ class ScheduleCommand(Command):
 
     @staticmethod
     def register(subparsers: Subparsers) -> None:
-        schedule_parser = subparsers.add_parser("schedule")
+        schedule_parser = subparsers.add_parser(
+            "schedule", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
         schedule_subparsers = schedule_parser.add_subparsers(
             dest="schedule_command", required=True
         )

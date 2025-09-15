@@ -10,7 +10,9 @@ class TaskCommand(Command):
 
     @staticmethod
     def register(subparsers: Subparsers) -> None:
-        task_parser = subparsers.add_parser("task")
+        task_parser = subparsers.add_parser(
+            "task", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
         task_subparsers = task_parser.add_subparsers(dest="task_command", required=True)
         for command in [
             TaskCreateCommand,

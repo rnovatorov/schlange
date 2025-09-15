@@ -12,10 +12,18 @@ class TaskCreateCommand(Command):
 
     @staticmethod
     def register(task_subparsers: Subparsers) -> None:
-        task_create_parser = task_subparsers.add_parser("create")
-        task_create_parser.add_argument("--delay", type=float, default=0)
+        task_create_parser = task_subparsers.add_parser(
+            "create", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
         task_create_parser.add_argument(
-            "args_file", nargs="?", type=argparse.FileType("rb"), default=sys.stdin
+            "--delay", type=float, default=0, help="delay before start"
+        )
+        task_create_parser.add_argument(
+            "args_file",
+            nargs="?",
+            type=argparse.FileType("rb"),
+            default=sys.stdin,
+            help="path to a file with tasks args",
         )
 
     @staticmethod

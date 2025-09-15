@@ -10,7 +10,9 @@ class ScheduleInspectCommand(Command):
 
     @staticmethod
     def register(schedule_subparsers: Subparsers) -> None:
-        schedule_inspect_parser = schedule_subparsers.add_parser("inspect")
+        schedule_inspect_parser = schedule_subparsers.add_parser(
+            "inspect", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
         schedule_inspect_parser.add_argument("schedule_id")
 
     @staticmethod
