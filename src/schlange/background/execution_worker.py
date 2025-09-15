@@ -49,7 +49,7 @@ class ExecutionWorker(Worker):
         except RuntimeError:
             callback()
             return False
-        future.add_done_callback(lambda _: callback)
+        future.add_done_callback(lambda _: callback())
         return True
 
     def _execute_task(self, task_id: str) -> None:
