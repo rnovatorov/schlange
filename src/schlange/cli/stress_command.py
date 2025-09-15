@@ -49,6 +49,12 @@ class StressCommand(Command):
             default=0,
             help="maximal duration of a task",
         )
+        stress_parser.add_argument(
+            "--failure-probability",
+            type=float,
+            default=0,
+            help="probability of task execution failure",
+        )
 
     @staticmethod
     def run(args: argparse.Namespace) -> None:
@@ -63,6 +69,8 @@ class StressCommand(Command):
             nonlocal tasks_handled
             with lock:
                 tasks_handled += 1
+            if random.random() < args.failure_probability:
+                raise RuntimeError("oops")
 
         with schlange.new(
             database_path=args.database_path,
