@@ -1,4 +1,4 @@
-# 🐍 Schlange
+# Schlange
 
 [![CI](https://github.com/rnovatorov/schlange/actions/workflows/ci.yml/badge.svg)](https://github.com/rnovatorov/schlange/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/schlange-queue.svg)](https://pypi.org/project/schlange-queue)
@@ -10,7 +10,7 @@ built on top of SQLite.
 It's designed for simplicity and reliability and might be a good choice when
 you need background jobs without complexities of RabbitMQ, Redis or Kafka.
 
-## ✨ Features
+## Features
 
 - **Persistence** - rely on rock-solid SQLite database for durable storage.
 - **Scheduler** - create persistent interval-based schedules for recurring tasks.
@@ -19,7 +19,7 @@ you need background jobs without complexities of RabbitMQ, Redis or Kafka.
 - **Cleanup** - automatically delete old tasks.
 - **CLI** - manage tasks and schedules from the command line.
 
-## 🚀 Quick Start
+## Quick Start
 
 Install from PyPI:
 
@@ -29,7 +29,7 @@ pip install schlange-queue
 
 Checkout [examples](examples).
 
-## 🚲 Alternatives
+## Alternatives
 
 - [Celery](https://github.com/celery/celery). Battle-tested, heavyweight.
 - [APScheduler](https://github.com/agronholm/apscheduler). Good.
