@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="schlange-queue",
-    version="0.1.1",
+    version="0.1.2",
     description="Lightweight, persistent, single-node task queue with at-least-once delivery guarantee",
     packages=setuptools.find_packages("src"),
     package_dir={"": "src"},
