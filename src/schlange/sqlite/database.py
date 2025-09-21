@@ -34,7 +34,6 @@ SQL_UPDATE_CURRENT_SCHEMA_VERSION = """
     SET version = :version
 """
 
-READ_POOL_CAPACITY = 4
 DATABASE_MIGRATIONS_PATH = pathlib.Path(__file__).parent / "migrations"
 
 
@@ -42,13 +41,15 @@ class Database:
 
     @classmethod
     @contextlib.contextmanager
-    def open(cls, path: pathlib.Path) -> Generator["Database", None, None]:
+    def open(
+        cls, path: pathlib.Path, read_pool_capacity: int
+    ) -> Generator["Database", None, None]:
         with contextlib.ExitStack() as stack:
             read_pool = stack.enter_context(
                 ConnectionPool.new(
                     path=path,
                     synchronous_full=False,
-                    capacity=READ_POOL_CAPACITY,
+                    capacity=read_pool_capacity,
                 )
             )
             write_pool = stack.enter_context(

@@ -69,7 +69,12 @@ class Schlange:
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
     ) -> Generator["Schlange", None, None]:
-        with sqlite.Database.open(path=database_path) as db:
+        with sqlite.Database.open(
+            path=database_path,
+            read_pool_capacity=calculate_optimal_database_read_pool_capacity(
+                execution_worker_threads
+            ),
+        ) as db:
             db.migrate()
             task_repository = sqlite.TaskRepository(db=db)
             task_service = core.TaskService(
@@ -185,3 +190,17 @@ class Schlange:
 
 
 new = Schlange.new
+
+
+def calculate_optimal_database_read_pool_capacity(execution_worker_threads: int) -> int:
+    execution_worker = 1
+    schedule_worker = 1
+    cleanup_worker = 1
+    additional_capacity = 1
+    return (
+        execution_worker
+        + execution_worker_threads
+        + cleanup_worker
+        + schedule_worker
+        + additional_capacity
+    )
