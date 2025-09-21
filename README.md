@@ -16,7 +16,7 @@ you need background jobs without complexities of RabbitMQ, Redis or Kafka.
 - **Scheduler** - create persistent interval-based schedules for recurring tasks.
 - **Concurrency** - execute tasks concurrently using a thread pool.
 - **Retries** - configure exponential backoff and max attempts.
-- **Cleanup** - automatically delete old tasks.
+- **Cleanup** - automatically delete old succeeded/failed tasks.
 - **CLI** - manage tasks and schedules from the command line.
 
 ## Quick Start
