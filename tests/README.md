@@ -29,12 +29,18 @@ python -m unittest tests.test_task.TestTask.test_create_task -v
 The test suite covers:
 
 - **Core Domain Models**:
-  - `Task` - Task lifecycle, execution, retries, and state transitions
-  - `Schedule` - Schedule creation, firing, and recurring task generation
-  - `RetryPolicy` - Exponential backoff and retry logic
-  - `CleanupPolicy` - Task cleanup deadlines
-  - `TaskExecution` - Task execution tracking
-  - `ScheduleFiring` - Schedule firing tracking
+  - `Task` - Task lifecycle, execution, retries, and state transitions (14 tests)
+  - `Schedule` - Schedule creation, firing, and recurring task generation (14 tests)
+  - `RetryPolicy` - Exponential backoff and retry logic (7 tests)
+  - `CleanupPolicy` - Task cleanup deadlines (3 tests)
+  - `TaskExecution` - Task execution tracking (4 tests)
+  - `ScheduleFiring` - Schedule firing tracking (4 tests)
+
+- **Specification Classes**:
+  - `TaskSpecification` - Task filtering logic (5 tests)
+  - `ScheduleSpecification` - Schedule filtering logic (4 tests)
+
+**Total: 55 tests**
 
 ## Test Structure
 
@@ -46,6 +52,8 @@ Each test file focuses on a specific component:
 - `test_cleanup_policy.py` - Tests for CleanupPolicy
 - `test_task_execution.py` - Tests for TaskExecution
 - `test_schedule_firing.py` - Tests for ScheduleFiring
+- `test_task_specification.py` - Tests for TaskSpecification
+- `test_schedule_specification.py` - Tests for ScheduleSpecification
 
 ## Dependencies
 
