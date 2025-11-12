@@ -19,7 +19,11 @@ lint-mypy:
 
 
 .PHONY: test
-test: test-examples
+test: test-unit test-examples
+
+.PHONY: test-unit
+test-unit:
+	python -m unittest discover -s tests -p "test_*.py" -v
 
 .PHONY: test-examples
 test-examples:
