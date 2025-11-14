@@ -198,13 +198,8 @@ class TestExecutionWorker(unittest.TestCase):
             threads=2,
         )
         
-        # Should catch exception and log it (bug: tries to access task.id which causes UnboundLocalError)
-        # This tests that the error is caught at least
-        try:
-            worker._execute_task("task-1")
-        except UnboundLocalError:
-            # Expected due to bug in implementation trying to log task.id
-            pass
+        # Should not raise exception
+        worker._execute_task("task-1")
         
         self.task_service.execute_task.assert_called_once_with("task-1")
 
@@ -218,12 +213,8 @@ class TestExecutionWorker(unittest.TestCase):
             threads=2,
         )
         
-        # Should catch exception and log it (bug: tries to access task.id which causes UnboundLocalError)
-        try:
-            worker._execute_task("task-1")
-        except UnboundLocalError:
-            # Expected due to bug in implementation trying to log task.id
-            pass
+        # Should not raise exception
+        worker._execute_task("task-1")
         
         self.task_service.execute_task.assert_called_once_with("task-1")
 
@@ -237,12 +228,8 @@ class TestExecutionWorker(unittest.TestCase):
             threads=2,
         )
         
-        # Should catch exception and log it (bug: tries to access task.id which causes UnboundLocalError)
-        try:
-            worker._execute_task("task-1")
-        except UnboundLocalError:
-            # Expected due to bug in implementation trying to log task.id
-            pass
+        # Should not raise exception
+        worker._execute_task("task-1")
         
         self.task_service.execute_task.assert_called_once_with("task-1")
 
