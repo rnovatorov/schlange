@@ -69,13 +69,13 @@ class ExecutionWorker(Worker):
             core.TaskExecutionNotEndedYetError,
             core.TaskExecutionNotBegunYetError,
         ) as err:
-            LOGGER.error("failed to execute task: id=%s, err=%r", task.id, err)
+            LOGGER.error("failed to execute task: id=%s, err=%r", task_id, err)
         except core.TaskHandlerNotFound as err:
-            LOGGER.warning("failed to execute task: id=%s, err=%r", task.id, err)
+            LOGGER.warning("failed to execute task: id=%s, err=%r", task_id, err)
         except (
             core.TaskNotFoundError,
             core.TaskNotActiveError,
             core.TaskNotReadyError,
             core.TaskUpdatedConcurrentlyError,
         ) as err:
-            LOGGER.debug("failed to execute task: id=%s, err=%r", task.id, err)
+            LOGGER.debug("failed to execute task: id=%s, err=%r", task_id, err)

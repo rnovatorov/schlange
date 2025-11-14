@@ -14,6 +14,7 @@ from .errors import (
     TaskExecutionNotEndedYetError,
     TaskHandlerNotFound,
     TaskNotActiveError,
+    TaskNotFailedError,
     TaskNotFoundError,
     TaskNotReadyError,
     TaskUpdatedConcurrentlyError,
