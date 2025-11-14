@@ -1,19 +1,16 @@
 import unittest
 import datetime
 
-from schlange.core.task import Task
-from schlange.core.task_state import TaskState
-from schlange.core.task_specification import TaskSpecification
-from schlange.core.retry_policy import RetryPolicy
+import schlange
 
 
 class TestTaskSpecification(unittest.TestCase):
-    """Test cases for TaskSpecification"""
+    """Test cases for schlange.core.TaskSpecification"""
 
     def setUp(self):
         """Set up common test data"""
         self.now = datetime.datetime(2025, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
-        self.retry_policy = RetryPolicy(
+        self.retry_policy = schlange.core.RetryPolicy(
             initial_delay=1.0,
             backoff_factor=2.0,
             max_delay=60.0,
@@ -22,9 +19,9 @@ class TestTaskSpecification(unittest.TestCase):
 
     def test_empty_specification_matches_any_task(self):
         """Test that empty specification matches any task"""
-        spec = TaskSpecification()
+        spec = schlange.core.TaskSpecification()
         
-        task = Task.create(
+        task = schlange.core.Task.create(
             now=self.now,
             id="task-1",
             args={},
@@ -37,9 +34,9 @@ class TestTaskSpecification(unittest.TestCase):
 
     def test_state_specification(self):
         """Test filtering by state"""
-        spec = TaskSpecification(state=TaskState.ACTIVE)
+        spec = schlange.core.TaskSpecification(state=schlange.core.TaskState.ACTIVE)
         
-        active_task = Task.create(
+        active_task = schlange.core.Task.create(
             now=self.now,
             id="task-1",
             args={},
@@ -57,10 +54,10 @@ class TestTaskSpecification(unittest.TestCase):
     def test_ready_as_of_specification(self):
         """Test filtering by ready_as_of time"""
         check_time = self.now + datetime.timedelta(seconds=10)
-        spec = TaskSpecification(ready_as_of=check_time)
+        spec = schlange.core.TaskSpecification(ready_as_of=check_time)
         
-        # Task ready in 5 seconds (ready before check_time)
-        early_task = Task.create(
+        # schlange.core.Task ready in 5 seconds (ready before check_time)
+        early_task = schlange.core.Task.create(
             now=self.now,
             id="task-1",
             args={},
@@ -70,8 +67,8 @@ class TestTaskSpecification(unittest.TestCase):
         )
         self.assertTrue(spec.is_satisfied_by(early_task))
         
-        # Task ready in 15 seconds (not ready by check_time)
-        late_task = Task.create(
+        # schlange.core.Task ready in 15 seconds (not ready by check_time)
+        late_task = schlange.core.Task.create(
             now=self.now,
             id="task-2",
             args={},
@@ -84,10 +81,10 @@ class TestTaskSpecification(unittest.TestCase):
     def test_last_execution_ended_before_specification(self):
         """Test filtering by last execution end time"""
         deadline = self.now + datetime.timedelta(seconds=100)
-        spec = TaskSpecification(last_execution_ended_before=deadline)
+        spec = schlange.core.TaskSpecification(last_execution_ended_before=deadline)
         
-        # Task with no execution
-        no_exec_task = Task.create(
+        # schlange.core.Task with no execution
+        no_exec_task = schlange.core.Task.create(
             now=self.now,
             id="task-1",
             args={},
@@ -97,8 +94,8 @@ class TestTaskSpecification(unittest.TestCase):
         )
         self.assertFalse(spec.is_satisfied_by(no_exec_task))
         
-        # Task with execution ended before deadline
-        early_task = Task.create(
+        # schlange.core.Task with execution ended before deadline
+        early_task = schlange.core.Task.create(
             now=self.now,
             id="task-2",
             args={},
@@ -110,8 +107,8 @@ class TestTaskSpecification(unittest.TestCase):
         early_task.end_execution(self.now + datetime.timedelta(seconds=50), error=None)
         self.assertTrue(spec.is_satisfied_by(early_task))
         
-        # Task with execution ended after deadline
-        late_task = Task.create(
+        # schlange.core.Task with execution ended after deadline
+        late_task = schlange.core.Task.create(
             now=self.now,
             id="task-3",
             args={},
@@ -126,13 +123,13 @@ class TestTaskSpecification(unittest.TestCase):
     def test_combined_specifications(self):
         """Test combining multiple specification criteria"""
         check_time = self.now + datetime.timedelta(seconds=10)
-        spec = TaskSpecification(
-            state=TaskState.ACTIVE,
+        spec = schlange.core.TaskSpecification(
+            state=schlange.core.TaskState.ACTIVE,
             ready_as_of=check_time,
         )
         
-        # Task that matches both criteria
-        matching_task = Task.create(
+        # schlange.core.Task that matches both criteria
+        matching_task = schlange.core.Task.create(
             now=self.now,
             id="task-1",
             args={},
@@ -142,7 +139,7 @@ class TestTaskSpecification(unittest.TestCase):
         )
         self.assertTrue(spec.is_satisfied_by(matching_task))
         
-        # Task with wrong state
+        # schlange.core.Task with wrong state
         matching_task.begin_execution(check_time)
         matching_task.end_execution(check_time + datetime.timedelta(seconds=1), error=None)
         self.assertFalse(spec.is_satisfied_by(matching_task))

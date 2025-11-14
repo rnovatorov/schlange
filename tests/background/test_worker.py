@@ -2,16 +2,16 @@ import unittest
 import time
 import threading
 
-from schlange.background.worker import Worker
+import schlange
 
 
 class TestWorker(unittest.TestCase):
-    """Test cases for Worker base class"""
+    """Test cases for schlange.background.Worker base class"""
 
     def test_worker_initialization(self):
         """Test worker initializes with correct attributes"""
         
-        class TestWorkerImpl(Worker):
+        class TestWorkerImpl(schlange.background.Worker):
             def work(self):
                 pass
         
@@ -30,19 +30,19 @@ class TestWorker(unittest.TestCase):
         work_called = []
         stop_after = 2
         
-        class TestWorkerImpl(Worker):
+        class TestWorkerImpl(schlange.background.Worker):
             def work(self):
                 work_called.append(1)
                 if len(work_called) >= stop_after:
                     self.stopping.set()
         
         with TestWorkerImpl(name="test-worker", interval=0.01) as worker:
-            # Worker should start automatically
+            # schlange.background.Worker should start automatically
             self.assertTrue(worker.is_alive())
             # Wait a bit for work to be called
             time.sleep(0.05)
         
-        # Worker should stop when exiting context
+        # schlange.background.Worker should stop when exiting context
         self.assertTrue(worker.stopped.is_set())
         self.assertFalse(worker.is_alive())
         # Verify work was called at least once
@@ -53,7 +53,7 @@ class TestWorker(unittest.TestCase):
         
         work_count = []
         
-        class TestWorkerImpl(Worker):
+        class TestWorkerImpl(schlange.background.Worker):
             def work(self):
                 work_count.append(1)
         
@@ -79,7 +79,7 @@ class TestWorker(unittest.TestCase):
         
         work_times = []
         
-        class TestWorkerImpl(Worker):
+        class TestWorkerImpl(schlange.background.Worker):
             def work(self):
                 work_times.append(time.time())
                 if len(work_times) >= 3:
@@ -100,9 +100,9 @@ class TestWorker(unittest.TestCase):
             self.assertLess(interval, 0.2)
 
     def test_worker_work_not_implemented(self):
-        """Test that Worker.work() raises NotImplementedError"""
+        """Test that schlange.background.Worker.work() raises NotImplementedError"""
         
-        worker = Worker(name="test-worker", interval=0.1)
+        worker = schlange.background.Worker(name="test-worker", interval=0.1)
         
         with self.assertRaises(NotImplementedError):
             worker.work()
@@ -110,7 +110,7 @@ class TestWorker(unittest.TestCase):
     def test_worker_multiple_stop_calls(self):
         """Test that multiple stop calls don't cause issues"""
         
-        class TestWorkerImpl(Worker):
+        class TestWorkerImpl(schlange.background.Worker):
             def work(self):
                 pass
         

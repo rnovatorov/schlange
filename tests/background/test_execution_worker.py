@@ -3,25 +3,17 @@ import datetime
 from unittest.mock import Mock, MagicMock, call
 import time
 
-from schlange.background.execution_worker import ExecutionWorker
-from schlange.core.task import Task
-from schlange.core.task_state import TaskState
-from schlange.core.retry_policy import RetryPolicy
-from schlange.core.errors import (
-    TaskNotFoundError,
-    TaskNotActiveError,
-    TaskHandlerNotFound,
-)
+import schlange
 
 
 class TestExecutionWorker(unittest.TestCase):
-    """Test cases for ExecutionWorker"""
+    """Test cases for schlange.background.ExecutionWorker"""
 
     def setUp(self):
         """Set up test fixtures"""
         self.task_service = Mock()
         self.now = datetime.datetime(2025, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
-        self.retry_policy = RetryPolicy(
+        self.retry_policy = schlange.core.RetryPolicy(
             initial_delay=1.0,
             backoff_factor=2.0,
             max_delay=60.0,
@@ -29,8 +21,8 @@ class TestExecutionWorker(unittest.TestCase):
         )
 
     def test_initialization(self):
-        """Test ExecutionWorker initialization"""
-        worker = ExecutionWorker(
+        """Test schlange.background.ExecutionWorker initialization"""
+        worker = schlange.background.ExecutionWorker(
             interval=1.0,
             task_service=self.task_service,
             threads=4,
@@ -45,7 +37,7 @@ class TestExecutionWorker(unittest.TestCase):
         """Test work method when no tasks are available"""
         self.task_service.executable_tasks.return_value = []
         
-        worker = ExecutionWorker(
+        worker = schlange.background.ExecutionWorker(
             interval=0.1,
             task_service=self.task_service,
             threads=2,
@@ -57,7 +49,7 @@ class TestExecutionWorker(unittest.TestCase):
 
     def test_work_submits_tasks(self):
         """Test work method submits executable tasks"""
-        task1 = Task.create(
+        task1 = schlange.core.Task.create(
             now=self.now,
             id="task-1",
             args={"key": "value1"},
@@ -65,7 +57,7 @@ class TestExecutionWorker(unittest.TestCase):
             retry_policy=self.retry_policy,
             schedule_id=None,
         )
-        task2 = Task.create(
+        task2 = schlange.core.Task.create(
             now=self.now,
             id="task-2",
             args={"key": "value2"},
@@ -84,11 +76,11 @@ class TestExecutionWorker(unittest.TestCase):
                     t.begin_execution(self.now)
                     t.end_execution(self.now + datetime.timedelta(seconds=1), error=None)
                     return t
-            raise TaskNotFoundError()
+            raise schlange.core.TaskNotFoundError()
         
         self.task_service.execute_task.side_effect = execute_side_effect
         
-        worker = ExecutionWorker(
+        worker = schlange.background.ExecutionWorker(
             interval=0.1,
             task_service=self.task_service,
             threads=2,
@@ -107,7 +99,7 @@ class TestExecutionWorker(unittest.TestCase):
 
     def test_submit_task_prevents_duplicate_execution(self):
         """Test that same task cannot be submitted twice simultaneously"""
-        task = Task.create(
+        task = schlange.core.Task.create(
             now=self.now,
             id="task-1",
             args={},
@@ -124,7 +116,7 @@ class TestExecutionWorker(unittest.TestCase):
         def slow_execute(task_id):
             execution_started.set()
             execution_continue.wait(timeout=1.0)
-            task_copy = Task.create(
+            task_copy = schlange.core.Task.create(
                 now=self.now,
                 id=task_id,
                 args={},
@@ -138,7 +130,7 @@ class TestExecutionWorker(unittest.TestCase):
         
         self.task_service.execute_task.side_effect = slow_execute
         
-        worker = ExecutionWorker(
+        worker = schlange.background.ExecutionWorker(
             interval=0.1,
             task_service=self.task_service,
             threads=2,
@@ -151,7 +143,7 @@ class TestExecutionWorker(unittest.TestCase):
         # Wait for execution to start
         execution_started.wait(timeout=1.0)
         
-        # Task should be in executing set
+        # schlange.core.Task should be in executing set
         self.assertIn(task.id, worker.executing_tasks)
         
         # Second submission should fail (task already executing)
@@ -164,7 +156,7 @@ class TestExecutionWorker(unittest.TestCase):
 
     def test_execute_task_success(self):
         """Test successful task execution"""
-        task = Task.create(
+        task = schlange.core.Task.create(
             now=self.now,
             id="task-1",
             args={},
@@ -178,7 +170,7 @@ class TestExecutionWorker(unittest.TestCase):
         task.end_execution(self.now + datetime.timedelta(seconds=1), error=None)
         self.task_service.execute_task.return_value = task
         
-        worker = ExecutionWorker(
+        worker = schlange.background.ExecutionWorker(
             interval=0.1,
             task_service=self.task_service,
             threads=2,
@@ -189,10 +181,10 @@ class TestExecutionWorker(unittest.TestCase):
         self.task_service.execute_task.assert_called_once_with("task-1")
 
     def test_execute_task_handles_not_found_error(self):
-        """Test that TaskNotFoundError is handled gracefully"""
-        self.task_service.execute_task.side_effect = TaskNotFoundError()
+        """Test that schlange.core.TaskNotFoundError is handled gracefully"""
+        self.task_service.execute_task.side_effect = schlange.core.TaskNotFoundError()
         
-        worker = ExecutionWorker(
+        worker = schlange.background.ExecutionWorker(
             interval=0.1,
             task_service=self.task_service,
             threads=2,
@@ -204,10 +196,10 @@ class TestExecutionWorker(unittest.TestCase):
         self.task_service.execute_task.assert_called_once_with("task-1")
 
     def test_execute_task_handles_not_active_error(self):
-        """Test that TaskNotActiveError is handled gracefully"""
-        self.task_service.execute_task.side_effect = TaskNotActiveError()
+        """Test that schlange.core.TaskNotActiveError is handled gracefully"""
+        self.task_service.execute_task.side_effect = schlange.core.TaskNotActiveError()
         
-        worker = ExecutionWorker(
+        worker = schlange.background.ExecutionWorker(
             interval=0.1,
             task_service=self.task_service,
             threads=2,
@@ -219,10 +211,10 @@ class TestExecutionWorker(unittest.TestCase):
         self.task_service.execute_task.assert_called_once_with("task-1")
 
     def test_execute_task_handles_handler_not_found(self):
-        """Test that TaskHandlerNotFound is handled gracefully"""
-        self.task_service.execute_task.side_effect = TaskHandlerNotFound()
+        """Test that schlange.core.TaskHandlerNotFound is handled gracefully"""
+        self.task_service.execute_task.side_effect = schlange.core.TaskHandlerNotFound()
         
-        worker = ExecutionWorker(
+        worker = schlange.background.ExecutionWorker(
             interval=0.1,
             task_service=self.task_service,
             threads=2,
@@ -235,7 +227,7 @@ class TestExecutionWorker(unittest.TestCase):
 
     def test_stop_shuts_down_thread_pool(self):
         """Test that stop method shuts down the thread pool"""
-        worker = ExecutionWorker(
+        worker = schlange.background.ExecutionWorker(
             interval=0.1,
             task_service=self.task_service,
             threads=2,

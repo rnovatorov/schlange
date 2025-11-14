@@ -2,26 +2,21 @@ import unittest
 import datetime
 from unittest.mock import Mock, call
 
-from schlange.background.cleanup_worker import CleanupWorker
-from schlange.core.task import Task
-from schlange.core.task_state import TaskState
-from schlange.core.retry_policy import RetryPolicy
-from schlange.core.cleanup_policy import CleanupPolicy
-from schlange.core.errors import TaskNotFoundError
+import schlange
 
 
 class TestCleanupWorker(unittest.TestCase):
-    """Test cases for CleanupWorker"""
+    """Test cases for schlange.background.CleanupWorker"""
 
     def setUp(self):
         """Set up test fixtures"""
         self.task_service = Mock()
-        self.cleanup_policy = CleanupPolicy(
+        self.cleanup_policy = schlange.core.CleanupPolicy(
             delete_succeeded_after=3600,  # 1 hour
             delete_failed_after=86400,  # 1 day
         )
         self.now = datetime.datetime(2025, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
-        self.retry_policy = RetryPolicy(
+        self.retry_policy = schlange.core.RetryPolicy(
             initial_delay=1.0,
             backoff_factor=2.0,
             max_delay=60.0,
@@ -29,8 +24,8 @@ class TestCleanupWorker(unittest.TestCase):
         )
 
     def test_initialization(self):
-        """Test CleanupWorker initialization"""
-        worker = CleanupWorker(
+        """Test schlange.background.CleanupWorker initialization"""
+        worker = schlange.background.CleanupWorker(
             interval=60.0,
             task_service=self.task_service,
             cleanup_policy=self.cleanup_policy,
@@ -44,7 +39,7 @@ class TestCleanupWorker(unittest.TestCase):
         """Test work method when no tasks need deletion"""
         self.task_service.deletable_tasks.return_value = []
         
-        worker = CleanupWorker(
+        worker = schlange.background.CleanupWorker(
             interval=60.0,
             task_service=self.task_service,
             cleanup_policy=self.cleanup_policy,
@@ -57,7 +52,7 @@ class TestCleanupWorker(unittest.TestCase):
 
     def test_work_deletes_tasks(self):
         """Test work method deletes eligible tasks"""
-        task1 = Task.create(
+        task1 = schlange.core.Task.create(
             now=self.now - datetime.timedelta(hours=2),
             id="task-1",
             args={},
@@ -71,7 +66,7 @@ class TestCleanupWorker(unittest.TestCase):
             error=None,
         )
         
-        task2 = Task.create(
+        task2 = schlange.core.Task.create(
             now=self.now - datetime.timedelta(hours=3),
             id="task-2",
             args={},
@@ -87,7 +82,7 @@ class TestCleanupWorker(unittest.TestCase):
         
         self.task_service.deletable_tasks.return_value = [task1, task2]
         
-        worker = CleanupWorker(
+        worker = schlange.background.CleanupWorker(
             interval=60.0,
             task_service=self.task_service,
             cleanup_policy=self.cleanup_policy,
@@ -101,8 +96,8 @@ class TestCleanupWorker(unittest.TestCase):
         self.task_service.delete_task.assert_any_call("task-2")
 
     def test_cleanup_handles_not_found_error(self):
-        """Test that TaskNotFoundError is handled gracefully during cleanup"""
-        task1 = Task.create(
+        """Test that schlange.core.TaskNotFoundError is handled gracefully during cleanup"""
+        task1 = schlange.core.Task.create(
             now=self.now - datetime.timedelta(hours=2),
             id="task-1",
             args={},
@@ -110,9 +105,9 @@ class TestCleanupWorker(unittest.TestCase):
             retry_policy=self.retry_policy,
             schedule_id=None,
         )
-        task1.state = TaskState.SUCCEEDED
+        task1.state = schlange.core.TaskState.SUCCEEDED
         
-        task2 = Task.create(
+        task2 = schlange.core.Task.create(
             now=self.now - datetime.timedelta(hours=3),
             id="task-2",
             args={},
@@ -120,14 +115,14 @@ class TestCleanupWorker(unittest.TestCase):
             retry_policy=self.retry_policy,
             schedule_id=None,
         )
-        task2.state = TaskState.SUCCEEDED
+        task2.state = schlange.core.TaskState.SUCCEEDED
         
         self.task_service.deletable_tasks.return_value = [task1, task2]
         
-        # First delete succeeds, second raises TaskNotFoundError
-        self.task_service.delete_task.side_effect = [None, TaskNotFoundError()]
+        # First delete succeeds, second raises schlange.core.TaskNotFoundError
+        self.task_service.delete_task.side_effect = [None, schlange.core.TaskNotFoundError()]
         
-        worker = CleanupWorker(
+        worker = schlange.background.CleanupWorker(
             interval=60.0,
             task_service=self.task_service,
             cleanup_policy=self.cleanup_policy,
@@ -141,7 +136,7 @@ class TestCleanupWorker(unittest.TestCase):
 
     def test_cleanup_handles_io_error(self):
         """Test that IOError is handled gracefully during cleanup"""
-        task = Task.create(
+        task = schlange.core.Task.create(
             now=self.now - datetime.timedelta(hours=2),
             id="task-1",
             args={},
@@ -149,12 +144,12 @@ class TestCleanupWorker(unittest.TestCase):
             retry_policy=self.retry_policy,
             schedule_id=None,
         )
-        task.state = TaskState.SUCCEEDED
+        task.state = schlange.core.TaskState.SUCCEEDED
         
         self.task_service.deletable_tasks.return_value = [task]
         self.task_service.delete_task.side_effect = IOError("Database error")
         
-        worker = CleanupWorker(
+        worker = schlange.background.CleanupWorker(
             interval=60.0,
             task_service=self.task_service,
             cleanup_policy=self.cleanup_policy,
@@ -169,7 +164,7 @@ class TestCleanupWorker(unittest.TestCase):
         """Test that work method calls cleanup_tasks"""
         self.task_service.deletable_tasks.return_value = []
         
-        worker = CleanupWorker(
+        worker = schlange.background.CleanupWorker(
             interval=60.0,
             task_service=self.task_service,
             cleanup_policy=self.cleanup_policy,

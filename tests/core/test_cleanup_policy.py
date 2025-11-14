@@ -1,15 +1,15 @@
 import unittest
 import datetime
 
-from schlange.core.cleanup_policy import CleanupPolicy
+import schlange
 
 
 class TestCleanupPolicy(unittest.TestCase):
-    """Test cases for CleanupPolicy"""
+    """Test cases for schlange.core.CleanupPolicy"""
 
     def test_succeeded_deadline(self):
         """Test succeeded deadline calculation"""
-        policy = CleanupPolicy(
+        policy = schlange.core.CleanupPolicy(
             delete_succeeded_after=3600,  # 1 hour
             delete_failed_after=86400,  # 1 day
         )
@@ -20,7 +20,7 @@ class TestCleanupPolicy(unittest.TestCase):
 
     def test_failed_deadline(self):
         """Test failed deadline calculation"""
-        policy = CleanupPolicy(
+        policy = schlange.core.CleanupPolicy(
             delete_succeeded_after=3600,  # 1 hour
             delete_failed_after=86400,  # 1 day
         )
@@ -31,7 +31,7 @@ class TestCleanupPolicy(unittest.TestCase):
 
     def test_zero_cleanup_time(self):
         """Test with zero cleanup time"""
-        policy = CleanupPolicy(
+        policy = schlange.core.CleanupPolicy(
             delete_succeeded_after=0,
             delete_failed_after=0,
         )

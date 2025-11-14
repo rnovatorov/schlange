@@ -1,16 +1,16 @@
 import unittest
 import datetime
 
-from schlange.core.schedule_firing import ScheduleFiring
+import schlange
 
 
 class TestScheduleFiring(unittest.TestCase):
-    """Test cases for ScheduleFiring"""
+    """Test cases for schlange.core.ScheduleFiring"""
 
     def test_begin(self):
         """Test beginning a schedule firing"""
         timestamp = datetime.datetime(2025, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
-        firing = ScheduleFiring.begin(timestamp, task_sequence_number=1)
+        firing = schlange.core.ScheduleFiring.begin(timestamp, task_sequence_number=1)
         
         self.assertEqual(firing.task_sequence_number, 1)
         self.assertEqual(firing.begun_at, timestamp)
@@ -23,7 +23,7 @@ class TestScheduleFiring(unittest.TestCase):
         begin_time = datetime.datetime(2025, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
         end_time = datetime.datetime(2025, 1, 1, 12, 0, 5, tzinfo=datetime.UTC)
         
-        firing = ScheduleFiring.begin(begin_time, task_sequence_number=1)
+        firing = schlange.core.ScheduleFiring.begin(begin_time, task_sequence_number=1)
         firing.end(end_time, error=None)
         
         self.assertEqual(firing.ended_at, end_time)
@@ -36,7 +36,7 @@ class TestScheduleFiring(unittest.TestCase):
         end_time = datetime.datetime(2025, 1, 1, 12, 0, 5, tzinfo=datetime.UTC)
         error_msg = "Failed to create task"
         
-        firing = ScheduleFiring.begin(begin_time, task_sequence_number=2)
+        firing = schlange.core.ScheduleFiring.begin(begin_time, task_sequence_number=2)
         firing.end(end_time, error=error_msg)
         
         self.assertEqual(firing.ended_at, end_time)
@@ -48,7 +48,7 @@ class TestScheduleFiring(unittest.TestCase):
         begin_time = datetime.datetime(2025, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
         end_time = datetime.datetime(2025, 1, 1, 12, 0, 10, tzinfo=datetime.UTC)
         
-        firing = ScheduleFiring.begin(begin_time, task_sequence_number=1)
+        firing = schlange.core.ScheduleFiring.begin(begin_time, task_sequence_number=1)
         self.assertIsNone(firing.duration)
         
         firing.end(end_time, error=None)
