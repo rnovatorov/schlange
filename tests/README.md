@@ -40,7 +40,13 @@ The test suite covers:
   - `TaskSpecification` - Task filtering logic (5 tests)
   - `ScheduleSpecification` - Schedule filtering logic (4 tests)
 
-**Total: 55 tests**
+- **Background Workers**:
+  - `Worker` - Base worker class with threading and lifecycle (6 tests)
+  - `ExecutionWorker` - Task execution worker with thread pool (9 tests)
+  - `CleanupWorker` - Task cleanup worker (6 tests)
+  - `ScheduleWorker` - Schedule firing worker (9 tests)
+
+**Total: 85 tests**
 
 ## Test Structure
 
@@ -54,6 +60,10 @@ Each test file focuses on a specific component:
 - `test_schedule_firing.py` - Tests for ScheduleFiring
 - `test_task_specification.py` - Tests for TaskSpecification
 - `test_schedule_specification.py` - Tests for ScheduleSpecification
+- `test_worker.py` - Tests for Worker base class
+- `test_execution_worker.py` - Tests for ExecutionWorker
+- `test_cleanup_worker.py` - Tests for CleanupWorker
+- `test_schedule_worker.py` - Tests for ScheduleWorker
 
 ## Dependencies
 
