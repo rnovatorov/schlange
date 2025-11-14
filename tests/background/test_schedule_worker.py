@@ -12,13 +12,13 @@ class TestScheduleWorker(unittest.TestCase):
         """Set up test fixtures"""
         self.schedule_service = Mock()
         self.now = datetime.datetime(2025, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
-        self.retry_policy = schlange.core.RetryPolicy(
+        self.retry_policy = schlange.RetryPolicy(
             initial_delay=1.0,
             backoff_factor=2.0,
             max_delay=60.0,
             max_attempts=3,
         )
-        self.task_retry_policy = schlange.core.RetryPolicy(
+        self.task_retry_policy = schlange.RetryPolicy(
             initial_delay=2.0,
             backoff_factor=2.0,
             max_delay=120.0,
@@ -51,7 +51,7 @@ class TestScheduleWorker(unittest.TestCase):
 
     def test_work_fires_schedules(self):
         """Test work method fires eligible schedules"""
-        schedule1 = schlange.core.Schedule.create(
+        schedule1 = schlange.Schedule.create(
             now=self.now - datetime.timedelta(seconds=10),
             id="schedule-1",
             delay=0.0,
@@ -62,7 +62,7 @@ class TestScheduleWorker(unittest.TestCase):
             task_retry_policy=self.task_retry_policy,
         )
         
-        schedule2 = schlange.core.Schedule.create(
+        schedule2 = schlange.Schedule.create(
             now=self.now - datetime.timedelta(seconds=10),
             id="schedule-2",
             delay=0.0,
@@ -86,7 +86,7 @@ class TestScheduleWorker(unittest.TestCase):
                     s.begin_firing(self.now)
                     s.end_firing(self.now + datetime.timedelta(seconds=1), error=None)
                     return s
-            raise schlange.core.ScheduleNotFoundError()
+            raise schlange.ScheduleNotFoundError()
         
         self.schedule_service.fire_schedule.side_effect = fire_side_effect
         
@@ -107,7 +107,7 @@ class TestScheduleWorker(unittest.TestCase):
 
     def test_fire_schedule_success(self):
         """Test successful schedule firing"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now - datetime.timedelta(seconds=10),
             id="schedule-1",
             delay=0.0,
@@ -133,8 +133,8 @@ class TestScheduleWorker(unittest.TestCase):
         self.schedule_service.fire_schedule.assert_called_once_with("schedule-1")
 
     def test_fire_schedule_handles_not_found_error(self):
-        """Test that schlange.core.ScheduleNotFoundError is handled gracefully"""
-        schedule = schlange.core.Schedule.create(
+        """Test that schlange.ScheduleNotFoundError is handled gracefully"""
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -145,7 +145,7 @@ class TestScheduleWorker(unittest.TestCase):
             task_retry_policy=self.task_retry_policy,
         )
         
-        self.schedule_service.fire_schedule.side_effect = schlange.core.ScheduleNotFoundError()
+        self.schedule_service.fire_schedule.side_effect = schlange.ScheduleNotFoundError()
         
         worker = schlange.background.ScheduleWorker(
             interval=1.0,
@@ -158,8 +158,8 @@ class TestScheduleWorker(unittest.TestCase):
         self.schedule_service.fire_schedule.assert_called_once_with("schedule-1")
 
     def test_fire_schedule_handles_not_enabled_error(self):
-        """Test that schlange.core.ScheduleNotEnabledError is handled gracefully"""
-        schedule = schlange.core.Schedule.create(
+        """Test that schlange.ScheduleNotEnabledError is handled gracefully"""
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -170,7 +170,7 @@ class TestScheduleWorker(unittest.TestCase):
             task_retry_policy=self.task_retry_policy,
         )
         
-        self.schedule_service.fire_schedule.side_effect = schlange.core.ScheduleNotEnabledError()
+        self.schedule_service.fire_schedule.side_effect = schlange.ScheduleNotEnabledError()
         
         worker = schlange.background.ScheduleWorker(
             interval=1.0,
@@ -183,8 +183,8 @@ class TestScheduleWorker(unittest.TestCase):
         self.schedule_service.fire_schedule.assert_called_once_with("schedule-1")
 
     def test_fire_schedule_handles_not_ready_error(self):
-        """Test that schlange.core.ScheduleNotReadyError is handled gracefully"""
-        schedule = schlange.core.Schedule.create(
+        """Test that schlange.ScheduleNotReadyError is handled gracefully"""
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=10.0,
@@ -195,7 +195,7 @@ class TestScheduleWorker(unittest.TestCase):
             task_retry_policy=self.task_retry_policy,
         )
         
-        self.schedule_service.fire_schedule.side_effect = schlange.core.ScheduleNotReadyError()
+        self.schedule_service.fire_schedule.side_effect = schlange.ScheduleNotReadyError()
         
         worker = schlange.background.ScheduleWorker(
             interval=1.0,
@@ -209,7 +209,7 @@ class TestScheduleWorker(unittest.TestCase):
 
     def test_fire_schedule_handles_io_error(self):
         """Test that IOError is handled gracefully"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -234,7 +234,7 @@ class TestScheduleWorker(unittest.TestCase):
 
     def test_work_stops_when_stopping_event_set(self):
         """Test that work loop stops when stopping event is set"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,

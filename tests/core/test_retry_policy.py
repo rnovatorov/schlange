@@ -4,11 +4,11 @@ import schlange
 
 
 class TestRetryPolicy(unittest.TestCase):
-    """Test cases for schlange.core.RetryPolicy"""
+    """Test cases for schlange.RetryPolicy"""
 
     def test_delay_with_zero_attempts(self):
         """Test delay calculation with 0 attempts"""
-        policy = schlange.core.RetryPolicy(
+        policy = schlange.RetryPolicy(
             initial_delay=1.0,
             backoff_factor=2.0,
             max_delay=100.0,
@@ -18,7 +18,7 @@ class TestRetryPolicy(unittest.TestCase):
 
     def test_delay_with_one_attempt(self):
         """Test delay calculation with 1 attempt returns initial delay"""
-        policy = schlange.core.RetryPolicy(
+        policy = schlange.RetryPolicy(
             initial_delay=5.0,
             backoff_factor=2.0,
             max_delay=100.0,
@@ -28,7 +28,7 @@ class TestRetryPolicy(unittest.TestCase):
 
     def test_delay_with_exponential_backoff(self):
         """Test exponential backoff calculation"""
-        policy = schlange.core.RetryPolicy(
+        policy = schlange.RetryPolicy(
             initial_delay=1.0,
             backoff_factor=2.0,
             max_delay=None,
@@ -44,7 +44,7 @@ class TestRetryPolicy(unittest.TestCase):
 
     def test_delay_with_max_delay_cap(self):
         """Test that delay is capped at max_delay"""
-        policy = schlange.core.RetryPolicy(
+        policy = schlange.RetryPolicy(
             initial_delay=10.0,
             backoff_factor=2.0,
             max_delay=15.0,
@@ -54,8 +54,8 @@ class TestRetryPolicy(unittest.TestCase):
         self.assertEqual(policy.delay(2), 15.0)
 
     def test_delay_raises_too_many_attempts(self):
-        """Test that schlange.core.TooManyAttemptsError is raised when max_attempts is exceeded"""
-        policy = schlange.core.RetryPolicy(
+        """Test that schlange.TooManyAttemptsError is raised when max_attempts is exceeded"""
+        policy = schlange.RetryPolicy(
             initial_delay=1.0,
             backoff_factor=2.0,
             max_delay=100.0,
@@ -66,12 +66,12 @@ class TestRetryPolicy(unittest.TestCase):
         policy.delay(1)
         policy.delay(2)
         # Should raise for attempt 3
-        with self.assertRaises(schlange.core.TooManyAttemptsError):
+        with self.assertRaises(schlange.TooManyAttemptsError):
             policy.delay(3)
 
     def test_total_delay(self):
         """Test total delay calculation"""
-        policy = schlange.core.RetryPolicy(
+        policy = schlange.RetryPolicy(
             initial_delay=1.0,
             backoff_factor=2.0,
             max_delay=None,
@@ -82,7 +82,7 @@ class TestRetryPolicy(unittest.TestCase):
 
     def test_total_delay_with_max_delay(self):
         """Test total delay calculation with max_delay cap"""
-        policy = schlange.core.RetryPolicy(
+        policy = schlange.RetryPolicy(
             initial_delay=10.0,
             backoff_factor=2.0,
             max_delay=15.0,

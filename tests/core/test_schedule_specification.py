@@ -5,18 +5,18 @@ import schlange
 
 
 class TestScheduleSpecification(unittest.TestCase):
-    """Test cases for schlange.core.ScheduleSpecification"""
+    """Test cases for schlange.ScheduleSpecification"""
 
     def setUp(self):
         """Set up common test data"""
         self.now = datetime.datetime(2025, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
-        self.retry_policy = schlange.core.RetryPolicy(
+        self.retry_policy = schlange.RetryPolicy(
             initial_delay=1.0,
             backoff_factor=2.0,
             max_delay=60.0,
             max_attempts=3,
         )
-        self.task_retry_policy = schlange.core.RetryPolicy(
+        self.task_retry_policy = schlange.RetryPolicy(
             initial_delay=2.0,
             backoff_factor=2.0,
             max_delay=120.0,
@@ -25,9 +25,9 @@ class TestScheduleSpecification(unittest.TestCase):
 
     def test_empty_specification_matches_any_schedule(self):
         """Test that empty specification matches any schedule"""
-        spec = schlange.core.ScheduleSpecification()
+        spec = schlange.ScheduleSpecification()
         
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -42,10 +42,10 @@ class TestScheduleSpecification(unittest.TestCase):
 
     def test_enabled_specification(self):
         """Test filtering by enabled state"""
-        enabled_spec = schlange.core.ScheduleSpecification(enabled=True)
-        disabled_spec = schlange.core.ScheduleSpecification(enabled=False)
+        enabled_spec = schlange.ScheduleSpecification(enabled=True)
+        disabled_spec = schlange.ScheduleSpecification(enabled=False)
         
-        enabled_schedule = schlange.core.Schedule.create(
+        enabled_schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -58,7 +58,7 @@ class TestScheduleSpecification(unittest.TestCase):
         self.assertTrue(enabled_spec.is_satisfied_by(enabled_schedule))
         self.assertFalse(disabled_spec.is_satisfied_by(enabled_schedule))
         
-        disabled_schedule = schlange.core.Schedule.create(
+        disabled_schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-2",
             delay=0.0,
@@ -74,10 +74,10 @@ class TestScheduleSpecification(unittest.TestCase):
     def test_ready_as_of_specification(self):
         """Test filtering by ready_as_of time"""
         check_time = self.now + datetime.timedelta(seconds=10)
-        spec = schlange.core.ScheduleSpecification(ready_as_of=check_time)
+        spec = schlange.ScheduleSpecification(ready_as_of=check_time)
         
-        # schlange.core.Schedule ready in 5 seconds (ready before check_time)
-        early_schedule = schlange.core.Schedule.create(
+        # schlange.Schedule ready in 5 seconds (ready before check_time)
+        early_schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=5.0,
@@ -89,8 +89,8 @@ class TestScheduleSpecification(unittest.TestCase):
         )
         self.assertTrue(spec.is_satisfied_by(early_schedule))
         
-        # schlange.core.Schedule ready in 15 seconds (not ready by check_time)
-        late_schedule = schlange.core.Schedule.create(
+        # schlange.Schedule ready in 15 seconds (not ready by check_time)
+        late_schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-2",
             delay=15.0,
@@ -105,13 +105,13 @@ class TestScheduleSpecification(unittest.TestCase):
     def test_combined_specifications(self):
         """Test combining multiple specification criteria"""
         check_time = self.now + datetime.timedelta(seconds=10)
-        spec = schlange.core.ScheduleSpecification(
+        spec = schlange.ScheduleSpecification(
             enabled=True,
             ready_as_of=check_time,
         )
         
-        # schlange.core.Schedule that matches both criteria
-        matching_schedule = schlange.core.Schedule.create(
+        # schlange.Schedule that matches both criteria
+        matching_schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=5.0,
@@ -123,8 +123,8 @@ class TestScheduleSpecification(unittest.TestCase):
         )
         self.assertTrue(spec.is_satisfied_by(matching_schedule))
         
-        # schlange.core.Schedule that's disabled
-        disabled_schedule = schlange.core.Schedule.create(
+        # schlange.Schedule that's disabled
+        disabled_schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-2",
             delay=5.0,
@@ -136,8 +136,8 @@ class TestScheduleSpecification(unittest.TestCase):
         )
         self.assertFalse(spec.is_satisfied_by(disabled_schedule))
         
-        # schlange.core.Schedule that's not ready yet
-        not_ready_schedule = schlange.core.Schedule.create(
+        # schlange.Schedule that's not ready yet
+        not_ready_schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-3",
             delay=15.0,

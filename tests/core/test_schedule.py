@@ -6,18 +6,18 @@ import schlange
 
 
 class TestSchedule(unittest.TestCase):
-    """Test cases for schlange.core.Schedule domain model"""
+    """Test cases for schlange.Schedule domain model"""
 
     def setUp(self):
         """Set up common test data"""
         self.now = datetime.datetime(2025, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
-        self.retry_policy = schlange.core.RetryPolicy(
+        self.retry_policy = schlange.RetryPolicy(
             initial_delay=1.0,
             backoff_factor=2.0,
             max_delay=60.0,
             max_attempts=3,
         )
-        self.task_retry_policy = schlange.core.RetryPolicy(
+        self.task_retry_policy = schlange.RetryPolicy(
             initial_delay=2.0,
             backoff_factor=2.0,
             max_delay=120.0,
@@ -26,7 +26,7 @@ class TestSchedule(unittest.TestCase):
 
     def test_create_schedule(self):
         """Test creating a new schedule"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=10.0,
@@ -53,7 +53,7 @@ class TestSchedule(unittest.TestCase):
 
     def test_create_schedule_disabled(self):
         """Test creating a disabled schedule"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -68,7 +68,7 @@ class TestSchedule(unittest.TestCase):
 
     def test_ready_when_time_has_come(self):
         """Test schedule is ready when ready_at time has passed"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=10.0,
@@ -90,7 +90,7 @@ class TestSchedule(unittest.TestCase):
 
     def test_generate_task_id(self):
         """Test task ID generation"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -116,7 +116,7 @@ class TestSchedule(unittest.TestCase):
 
     def test_begin_firing(self):
         """Test beginning schedule firing"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -136,7 +136,7 @@ class TestSchedule(unittest.TestCase):
 
     def test_begin_firing_when_disabled(self):
         """Test that beginning firing fails if schedule is disabled"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -147,12 +147,12 @@ class TestSchedule(unittest.TestCase):
             task_retry_policy=self.task_retry_policy,
         )
         
-        with self.assertRaises(schlange.core.ScheduleNotEnabledError):
+        with self.assertRaises(schlange.ScheduleNotEnabledError):
             schedule.begin_firing(self.now)
 
     def test_begin_firing_when_not_ready(self):
         """Test that beginning firing fails if schedule is not ready"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=10.0,
@@ -163,12 +163,12 @@ class TestSchedule(unittest.TestCase):
             task_retry_policy=self.task_retry_policy,
         )
         
-        with self.assertRaises(schlange.core.ScheduleNotReadyError):
+        with self.assertRaises(schlange.ScheduleNotReadyError):
             schedule.begin_firing(self.now)
 
     def test_begin_firing_when_previous_not_ended(self):
         """Test that beginning firing fails if previous firing hasn't ended"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -181,12 +181,12 @@ class TestSchedule(unittest.TestCase):
         
         schedule.begin_firing(self.now)
         
-        with self.assertRaises(schlange.core.ScheduleFiringNotEndedYetError):
+        with self.assertRaises(schlange.ScheduleFiringNotEndedYetError):
             schedule.begin_firing(self.now)
 
     def test_end_firing_success(self):
         """Test ending firing successfully"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -215,7 +215,7 @@ class TestSchedule(unittest.TestCase):
 
     def test_end_firing_with_error_and_retry(self):
         """Test ending firing with error triggers retry"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -240,7 +240,7 @@ class TestSchedule(unittest.TestCase):
 
     def test_end_firing_with_error_max_attempts(self):
         """Test that schedule moves to next firing after max retry attempts"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -269,7 +269,7 @@ class TestSchedule(unittest.TestCase):
 
     def test_end_firing_not_begun(self):
         """Test that ending firing fails if not begun"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -280,12 +280,12 @@ class TestSchedule(unittest.TestCase):
             task_retry_policy=self.task_retry_policy,
         )
         
-        with self.assertRaises(schlange.core.ScheduleFiringNotBegunYetError):
+        with self.assertRaises(schlange.ScheduleFiringNotBegunYetError):
             schedule.end_firing(self.now, error=None)
 
     def test_last_firing(self):
         """Test last_firing property"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
@@ -304,7 +304,7 @@ class TestSchedule(unittest.TestCase):
 
     def test_firings_reset_on_sequence_change(self):
         """Test that firings are reset when sequence number changes"""
-        schedule = schlange.core.Schedule.create(
+        schedule = schlange.Schedule.create(
             now=self.now,
             id="schedule-1",
             delay=0.0,
