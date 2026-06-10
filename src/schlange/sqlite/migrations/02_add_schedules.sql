@@ -4,7 +4,7 @@ CREATE TABLE schedules (
     created_at TEXT NOT NULL,
     ready_at TEXT NOT NULL,
     origin TEXT NOT NULL,
-    interval INT NOT NULL,
+    interval REAL NOT NULL,
     retry_policy TEXT NOT NULL,
     enabled INT NOT NULL,
     task_args TEXT NOT NULL,
