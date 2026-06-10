@@ -19,11 +19,15 @@ lint-mypy:
 
 
 .PHONY: test
-test: test-examples
+test: test-examples test-unit
 
 .PHONY: test-examples
 test-examples:
 	pipenv run python -m doctest -v examples/*
+
+.PHONY: test-unit
+test-unit:
+	pipenv run python -m unittest discover -v
 
 
 .PHONY: .ci-setup-env
