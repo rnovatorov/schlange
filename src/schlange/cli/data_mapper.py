@@ -18,6 +18,7 @@ class DataMapper:
             "id": task.id,
             "version": task.version,
             "created_at": self.dump_timestamp(task.created_at),
+            "state": self.dump_task_state(task.state),
             "args": task.args,
             "ready_at": self.dump_timestamp(task.ready_at),
             "retry_policy": self.dump_retry_policy(task.retry_policy),
