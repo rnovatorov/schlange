@@ -32,7 +32,6 @@ __all__ = [
     "ScheduleFiring",
     "Schlange",
     "Task",
-    "TaskArgs",
     "TaskExecution",
     "TaskHandler",
     "TaskState",
