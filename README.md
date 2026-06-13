@@ -31,7 +31,7 @@ Checkout [examples](examples).
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+For development and contributing guides see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Alternatives
 
