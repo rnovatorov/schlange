@@ -29,6 +29,10 @@ pip install schlange-queue
 
 Checkout [examples](examples).
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Alternatives
 
 - [Celery](https://github.com/celery/celery). Battle-tested, heavyweight.
