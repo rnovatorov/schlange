@@ -3,7 +3,7 @@ default:
 
 
 .PHONY: lint
-lint: lint-black lint-isort lint-mypy
+lint: lint-black lint-isort lint-mypy lint-pyflakes
 
 .PHONY: lint-black
 lint-black:
@@ -16,6 +16,10 @@ lint-isort:
 .PHONY: lint-mypy
 lint-mypy:
 	pipenv run mypy .
+
+.PHONY: lint-pyflakes
+lint-pyflakes:
+	pipenv run pyflakes .
 
 
 .PHONY: test

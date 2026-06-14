@@ -6,3 +6,5 @@ client and delegates to the appropriate service.
 """
 
 from .main import main
+
+__all__ = ["main"]
