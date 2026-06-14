@@ -19,4 +19,11 @@ class TaskRepository(Protocol):
         pass
 
     def update_task(self, task: Task, synchronous: bool) -> None:
+        """
+        If synchronous is True, the write is durable before this
+        method returns. If False, the write may be lost in a crash;
+        crash recovery is expected to re-execute any lost work.
+        In both cases, the write is visible to other connections
+        once the method returns.
+        """
         pass

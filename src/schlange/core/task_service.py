@@ -99,6 +99,10 @@ class TaskService:
 
     def execute_task(self, task_id: str) -> Task:
         """
+        The update is not durable. If a crash occurs after the handler
+        runs but before the write is persisted, crash recovery will
+        re-execute the task. This trades durability for throughput.
+
         Raises:
             IOError: IO error occurred during the operation.
             TaskNotActiveError: Task is not in active state.
