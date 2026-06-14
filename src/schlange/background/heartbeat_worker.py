@@ -9,6 +9,15 @@ LOGGER = logging.getLogger(__name__)
 
 
 class HeartbeatWorker(Worker):
+    """
+    Worker that periodically heartbeats a node registration.
+
+    The node is registered when the worker starts and deregistered
+    when it stops. Registration and deregistration happen on the
+    calling thread, not the worker thread, to ensure the node
+    exists before any heartbeat is sent and is removed promptly on
+    shutdown.
+    """
 
     def __init__(
         self, interval: float, node_service: core.NodeService, node_id: Optional[str]
