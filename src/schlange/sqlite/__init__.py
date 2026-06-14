@@ -1,3 +1,9 @@
+"""
+SQLite persistence adapter.
+
+Implements the repository protocols defined in the domain layer.
+"""
+
 from .connection import Connection
 from .database import Database
 from .errors import NoRowsError

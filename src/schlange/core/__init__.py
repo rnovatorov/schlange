@@ -1,3 +1,10 @@
+"""
+Domain layer.
+
+Has no I/O dependencies. The persistence layer implements the
+repository protocols defined here.
+"""
+
 from .cleanup_policy import CleanupPolicy
 from .dto import DTO
 from .errors import (
