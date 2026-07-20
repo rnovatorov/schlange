@@ -28,8 +28,6 @@ DEFAULT_CLEANUP_WORKER_INTERVAL = 60
 
 DEFAULT_SCHEDULE_WORKER_INTERVAL = 1
 
-DEFAULT_HEARTBEAT_WORKER_INTERVAL = 5
-
 
 @dataclasses.dataclass
 class Schlange:
@@ -40,9 +38,6 @@ class Schlange:
     execution_worker: background.ExecutionWorker
     cleanup_worker: background.CleanupWorker
     schedule_worker: background.ScheduleWorker
-    node_service: core.NodeService
-    node_id: Optional[str]
-    heartbeat_worker: background.HeartbeatWorker
 
     def __enter__(self) -> "Schlange":
         self.start()
@@ -55,10 +50,8 @@ class Schlange:
         self.execution_worker.start()
         self.cleanup_worker.start()
         self.schedule_worker.start()
-        self.heartbeat_worker.start()
 
     def stop(self) -> None:
-        self.heartbeat_worker.stop()
         self.cleanup_worker.stop()
         self.execution_worker.stop()
         self.schedule_worker.stop()
@@ -75,8 +68,6 @@ class Schlange:
         cleanup_policy: core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
-        node_id: Optional[str] = None,
-        heartbeat_worker_interval: float = DEFAULT_HEARTBEAT_WORKER_INTERVAL,
     ) -> Generator["Schlange", None, None]:
         with sqlite.Database.open(
             path=database_path,
@@ -94,8 +85,6 @@ class Schlange:
                 schedule_repository=schedule_repository,
                 task_service=task_service,
             )
-            node_repository = sqlite.NodeRepository(db=db)
-            node_service = core.NodeService(node_repository=node_repository)
             execution_worker = background.ExecutionWorker(
                 interval=execution_worker_interval,
                 task_service=task_service,
@@ -110,11 +99,6 @@ class Schlange:
                 interval=schedule_worker_interval,
                 schedule_service=schedule_service,
             )
-            heartbeat_worker = background.HeartbeatWorker(
-                interval=heartbeat_worker_interval,
-                node_service=node_service,
-                node_id=node_id,
-            )
             yield cls(
                 task_service=task_service,
                 default_retry_policy=default_retry_policy,
@@ -122,9 +106,6 @@ class Schlange:
                 execution_worker=execution_worker,
                 cleanup_worker=cleanup_worker,
                 schedule_worker=schedule_worker,
-                node_service=node_service,
-                node_id=node_id,
-                heartbeat_worker=heartbeat_worker,
             )
 
     def create_task(
@@ -215,13 +196,11 @@ def calculate_optimal_database_read_pool_capacity(execution_worker_threads: int)
     execution_worker = 1
     schedule_worker = 1
     cleanup_worker = 1
-    heartbeat_worker = 1
     additional_capacity = 1
     return (
         execution_worker
         + execution_worker_threads
         + cleanup_worker
         + schedule_worker
-        + heartbeat_worker
         + additional_capacity
     )

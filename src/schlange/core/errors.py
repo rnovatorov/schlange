@@ -68,15 +68,3 @@ class ScheduleAlreadyExistsError(Error):
 
 class ScheduleNotFoundError(Error):
     pass
-
-
-class NodeAlreadyExistsError(Error):
-    pass
-
-
-class NodeNotFoundError(Error):
-    pass
-
-
-class NodeUpdatedConcurrentlyError(Error):
-    pass
