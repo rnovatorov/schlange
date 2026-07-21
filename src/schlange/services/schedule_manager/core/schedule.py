@@ -3,30 +3,29 @@ import datetime
 import uuid
 from typing import List, Optional
 
-from .aggregate import Aggregate
-from .dto import DTO
+from schlange.internal import core as internal_core
+from schlange.services.task_manager import core as task_manager_core
+
 from .errors import (
     ScheduleFiringNotBegunYetError,
     ScheduleFiringNotEndedYetError,
     ScheduleNotEnabledError,
     ScheduleNotReadyError,
-    TooManyAttemptsError,
 )
-from .retry_policy import RetryPolicy
 from .schedule_firing import ScheduleFiring
 
 
 @dataclasses.dataclass
-class Schedule(Aggregate):
+class Schedule(internal_core.Aggregate):
 
     created_at: datetime.datetime
     ready_at: datetime.datetime
     origin: datetime.datetime
     interval: float
-    retry_policy: RetryPolicy
+    retry_policy: task_manager_core.RetryPolicy
     enabled: bool
-    task_args: DTO
-    task_retry_policy: RetryPolicy
+    task_args: internal_core.DTO
+    task_retry_policy: task_manager_core.RetryPolicy
     task_sequence_number: int
     firings: List[ScheduleFiring]
 
@@ -37,10 +36,10 @@ class Schedule(Aggregate):
         id: str,
         delay: float,
         interval: float,
-        retry_policy: RetryPolicy,
+        retry_policy: task_manager_core.RetryPolicy,
         enabled: bool,
-        task_args: DTO,
-        task_retry_policy: RetryPolicy,
+        task_args: internal_core.DTO,
+        task_retry_policy: task_manager_core.RetryPolicy,
     ) -> "Schedule":
         origin = now + datetime.timedelta(seconds=delay)
         return cls(
@@ -95,7 +94,7 @@ class Schedule(Aggregate):
                 if retry_at < self._next_firing_at():
                     self.ready_at = retry_at
                     return
-            except TooManyAttemptsError:
+            except task_manager_core.TooManyAttemptsError:
                 pass
         self.task_sequence_number += 1
         self.origin += datetime.timedelta(seconds=self.interval)

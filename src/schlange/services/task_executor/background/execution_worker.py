@@ -3,14 +3,13 @@ import logging
 import threading
 from typing import Set
 
-from schlange import core
-
-from .worker import Worker
+from schlange.internal import background
+from schlange.services.task_manager import core
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ExecutionWorker(Worker):
+class ExecutionWorker(background.Worker):
 
     def __init__(
         self, interval: float, task_service: core.TaskService, threads: int

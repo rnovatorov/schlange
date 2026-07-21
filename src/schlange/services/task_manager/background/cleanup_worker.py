@@ -1,13 +1,12 @@
 import logging
 
-from schlange import core
-
-from .worker import Worker
+from schlange.internal import background
+from schlange.services.task_manager import core
 
 LOGGER = logging.getLogger(__name__)
 
 
-class CleanupWorker(Worker):
+class CleanupWorker(background.Worker):
 
     def __init__(
         self,

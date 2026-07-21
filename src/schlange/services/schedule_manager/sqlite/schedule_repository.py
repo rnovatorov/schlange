@@ -2,11 +2,10 @@ import json
 import sqlite3
 from typing import List
 
-from schlange import core
+from schlange.internal import sqlite
+from schlange.services.schedule_manager import core
 
 from .data_mapper import DataMapper
-from .database import Database
-from .errors import NoRowsError
 
 SQL_CREATE_SCHEDULE = """
     INSERT
@@ -58,7 +57,7 @@ SQL_UPDATE_SCHEDULE_BY_ID = """
 
 class ScheduleRepository:
 
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: sqlite.Database) -> None:
         self.db = db
         self.data_mapper = DataMapper()
 
@@ -102,7 +101,7 @@ class ScheduleRepository:
         with self.db.transaction(read_only=True) as tx:
             try:
                 row = tx.query_row(SQL_GET_SCHEDULE_BY_ID, {"id": schedule_id})
-            except NoRowsError:
+            except sqlite.NoRowsError:
                 raise core.ScheduleNotFoundError() from None
             return self._collect_schedule(row)
 

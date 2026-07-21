@@ -1,13 +1,12 @@
 import logging
 
-from schlange import core
-
-from .worker import Worker
+from schlange.internal import background
+from schlange.services.schedule_manager import core
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ScheduleWorker(Worker):
+class ScheduleWorker(background.Worker):
 
     def __init__(self, interval: float, schedule_service: core.ScheduleService) -> None:
         super().__init__(name="schlange.ScheduleWorker", interval=interval)

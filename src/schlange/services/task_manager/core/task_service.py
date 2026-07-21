@@ -4,10 +4,10 @@ import traceback
 import uuid
 from typing import List, Optional
 
+from schlange.internal import core as internal_core
+
 from .cleanup_policy import CleanupPolicy
-from .dto import DTO
 from .errors import TaskHandlerNotFound
-from .retry_policy import RetryPolicy
 from .task import Task
 from .task_handler import TaskHandler
 from .task_repository import TaskRepository
@@ -23,9 +23,9 @@ class TaskService:
 
     def create_task(
         self,
-        args: DTO,
+        args: internal_core.DTO,
         delay: float,
-        retry_policy: RetryPolicy,
+        retry_policy: internal_core.RetryPolicy,
         id: Optional[str] = None,
         schedule_id: Optional[str] = None,
     ) -> Task:

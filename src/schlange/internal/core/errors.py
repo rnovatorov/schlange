@@ -1,0 +1,2 @@
+class TooManyAttemptsError(Exception):
+    pass

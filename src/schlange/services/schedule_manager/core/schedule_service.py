@@ -4,29 +4,28 @@ import traceback
 import uuid
 from typing import List, Optional
 
-from .dto import DTO
-from .errors import TaskAlreadyExistsError
-from .retry_policy import RetryPolicy
+from schlange.internal import core as internal_core
+from schlange.services.task_manager import core as task_manager_core
+
 from .schedule import Schedule
 from .schedule_repository import ScheduleRepository
 from .schedule_specification import ScheduleSpecification
-from .task_service import TaskService
 
 
 @dataclasses.dataclass
 class ScheduleService:
 
     schedule_repository: ScheduleRepository
-    task_service: TaskService
+    task_service: task_manager_core.TaskService
 
     def create_schedule(
         self,
         delay: float,
         interval: float,
-        retry_policy: RetryPolicy,
+        retry_policy: task_manager_core.RetryPolicy,
         enabled: bool,
-        task_args: DTO,
-        task_retry_policy: RetryPolicy,
+        task_args: internal_core.DTO,
+        task_retry_policy: task_manager_core.RetryPolicy,
         id: Optional[str] = None,
     ) -> Schedule:
         if id is None:
@@ -67,7 +66,7 @@ class ScheduleService:
                 retry_policy=schedule.task_retry_policy,
                 schedule_id=schedule_id,
             )
-        except TaskAlreadyExistsError:
+        except task_manager_core.TaskAlreadyExistsError:
             pass
         except Exception:
             error = traceback.format_exc()

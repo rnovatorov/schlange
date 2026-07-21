@@ -2,11 +2,10 @@ import json
 import sqlite3
 from typing import List
 
-from schlange import core
+from schlange.internal import sqlite
+from schlange.services.task_manager import core
 
 from .data_mapper import DataMapper
-from .database import Database
-from .errors import NoRowsError
 
 SQL_CREATE_TASK = """
     INSERT INTO tasks (id, version, created_at, args, state, ready_at, retry_policy,
@@ -56,7 +55,7 @@ SQL_UPDATE_TASK_BY_ID = """
 
 class TaskRepository:
 
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: sqlite.Database) -> None:
         self.db = db
         self.data_mapper = DataMapper()
 
@@ -99,7 +98,7 @@ class TaskRepository:
         with self.db.transaction(read_only=True) as tx:
             try:
                 row = tx.query_row(SQL_GET_TASK_BY_ID, {"id": task_id})
-            except NoRowsError:
+            except sqlite.NoRowsError:
                 raise core.TaskNotFoundError()
             return self._collect_task(row)
 

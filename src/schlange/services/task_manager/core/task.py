@@ -2,29 +2,27 @@ import dataclasses
 import datetime
 from typing import List, Optional
 
-from .aggregate import Aggregate
-from .dto import DTO
+from schlange.internal import core as internal_core
+
 from .errors import (
     TaskExecutionNotBegunYetError,
     TaskExecutionNotEndedYetError,
     TaskNotActiveError,
     TaskNotFailedError,
     TaskNotReadyError,
-    TooManyAttemptsError,
 )
-from .retry_policy import RetryPolicy
 from .task_execution import TaskExecution
 from .task_state import TaskState
 
 
 @dataclasses.dataclass
-class Task(Aggregate):
+class Task(internal_core.Aggregate):
 
     created_at: datetime.datetime
     state: TaskState
-    args: DTO
+    args: internal_core.DTO
     ready_at: datetime.datetime
-    retry_policy: RetryPolicy
+    retry_policy: internal_core.RetryPolicy
     executions: List[TaskExecution]
     schedule_id: Optional[str]
 
@@ -33,9 +31,9 @@ class Task(Aggregate):
         cls,
         now: datetime.datetime,
         id: str,
-        args: DTO,
+        args: internal_core.DTO,
         delay: float,
-        retry_policy: RetryPolicy,
+        retry_policy: internal_core.RetryPolicy,
         schedule_id: Optional[str],
     ) -> "Task":
         return cls(
@@ -76,7 +74,7 @@ class Task(Aggregate):
         try:
             delay = self.retry_policy.delay(attempts=len(self.executions))
             self.ready_at = now + datetime.timedelta(seconds=delay)
-        except TooManyAttemptsError:
+        except internal_core.TooManyAttemptsError:
             self.state = TaskState.FAILED
 
     def reactivate(self, now: datetime.datetime, delay: float) -> None:

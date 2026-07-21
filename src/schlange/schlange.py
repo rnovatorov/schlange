@@ -5,12 +5,19 @@ import os
 import pathlib
 from typing import Generator, List, Optional
 
-from . import background, core, sqlite
+from schlange.internal import core, sqlite
+from schlange.services.schedule_manager import background as schedule_manager_background
+from schlange.services.schedule_manager import core as schedule_manager_core
+from schlange.services.schedule_manager import sqlite as schedule_manager_sqlite
+from schlange.services.task_executor import background as task_executor_background
+from schlange.services.task_manager import background as task_manager_background
+from schlange.services.task_manager import core as task_manager_core
+from schlange.services.task_manager import sqlite as task_manager_sqlite
 
 LOGGER = logging.getLogger(__name__)
 
 DEFAULT_DATABASE_PATH = pathlib.Path("schlange.db")
-DEFAULT_RETRY_POLICY = core.RetryPolicy(
+DEFAULT_RETRY_POLICY = task_manager_core.RetryPolicy(
     initial_delay=1,
     backoff_factor=2.0,
     max_delay=60 * 60 * 24,
@@ -20,7 +27,7 @@ DEFAULT_RETRY_POLICY = core.RetryPolicy(
 DEFAULT_EXECUTION_WORKER_INTERVAL = 1
 DEFAULT_EXECUTION_WORKER_THREADS = os.cpu_count() or 4
 
-DEFAULT_CLEANUP_POLICY = core.CleanupPolicy(
+DEFAULT_CLEANUP_POLICY = task_manager_core.CleanupPolicy(
     delete_succeeded_after=60 * 60 * 24,
     delete_failed_after=60 * 60 * 24 * 7,
 )
@@ -32,12 +39,12 @@ DEFAULT_SCHEDULE_WORKER_INTERVAL = 1
 @dataclasses.dataclass
 class Schlange:
 
-    task_service: core.TaskService
-    default_retry_policy: core.RetryPolicy
-    schedule_service: core.ScheduleService
-    execution_worker: background.ExecutionWorker
-    cleanup_worker: background.CleanupWorker
-    schedule_worker: background.ScheduleWorker
+    task_service: task_manager_core.TaskService
+    default_retry_policy: task_manager_core.RetryPolicy
+    schedule_service: schedule_manager_core.ScheduleService
+    execution_worker: task_executor_background.ExecutionWorker
+    cleanup_worker: task_manager_background.CleanupWorker
+    schedule_worker: schedule_manager_background.ScheduleWorker
 
     def __enter__(self) -> "Schlange":
         self.start()
@@ -61,11 +68,11 @@ class Schlange:
     def new(
         cls,
         database_path: pathlib.Path = DEFAULT_DATABASE_PATH,
-        task_handler: Optional[core.TaskHandler] = None,
-        default_retry_policy: core.RetryPolicy = DEFAULT_RETRY_POLICY,
+        task_handler: Optional[task_manager_core.TaskHandler] = None,
+        default_retry_policy: task_manager_core.RetryPolicy = DEFAULT_RETRY_POLICY,
         execution_worker_interval: float = DEFAULT_EXECUTION_WORKER_INTERVAL,
         execution_worker_threads: int = DEFAULT_EXECUTION_WORKER_THREADS,
-        cleanup_policy: core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
+        cleanup_policy: task_manager_core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
     ) -> Generator["Schlange", None, None]:
@@ -76,26 +83,26 @@ class Schlange:
             ),
         ) as db:
             db.migrate()
-            task_repository = sqlite.TaskRepository(db=db)
-            task_service = core.TaskService(
+            task_repository = task_manager_sqlite.TaskRepository(db=db)
+            task_service = task_manager_core.TaskService(
                 task_repository=task_repository, task_handler=task_handler
             )
-            schedule_repository = sqlite.ScheduleRepository(db=db)
-            schedule_service = core.ScheduleService(
+            schedule_repository = schedule_manager_sqlite.ScheduleRepository(db=db)
+            schedule_service = schedule_manager_core.ScheduleService(
                 schedule_repository=schedule_repository,
                 task_service=task_service,
             )
-            execution_worker = background.ExecutionWorker(
+            execution_worker = task_executor_background.ExecutionWorker(
                 interval=execution_worker_interval,
                 task_service=task_service,
                 threads=execution_worker_threads,
             )
-            cleanup_worker = background.CleanupWorker(
+            cleanup_worker = task_manager_background.CleanupWorker(
                 interval=cleanup_worker_interval,
                 task_service=task_service,
                 cleanup_policy=cleanup_policy,
             )
-            schedule_worker = background.ScheduleWorker(
+            schedule_worker = schedule_manager_background.ScheduleWorker(
                 interval=schedule_worker_interval,
                 schedule_service=schedule_service,
             )
@@ -112,9 +119,9 @@ class Schlange:
         self,
         args: core.DTO,
         delay: float = 0.0,
-        retry_policy: Optional[core.RetryPolicy] = None,
+        retry_policy: Optional[task_manager_core.RetryPolicy] = None,
         id: Optional[str] = None,
-    ) -> core.Task:
+    ) -> task_manager_core.Task:
         if retry_policy is None:
             retry_policy = self.default_retry_policy
         LOGGER.debug(
@@ -132,17 +139,19 @@ class Schlange:
         LOGGER.info("task created: task=%r", task)
         return task
 
-    def task(self, task_id: str) -> core.Task:
+    def task(self, task_id: str) -> task_manager_core.Task:
         return self.task_service.task(task_id)
 
     def delete_task(self, task_id: str) -> None:
         self.task_service.delete_task(task_id)
 
-    def tasks(self, state: Optional[core.TaskState] = None) -> List[core.Task]:
-        spec = core.TaskSpecification(state=state)
+    def tasks(
+        self, state: Optional[task_manager_core.TaskState] = None
+    ) -> List[task_manager_core.Task]:
+        spec = task_manager_core.TaskSpecification(state=state)
         return self.task_service.list_tasks(spec=spec)
 
-    def reactivate_task(self, task_id: str, delay: float = 0) -> core.Task:
+    def reactivate_task(self, task_id: str, delay: float = 0) -> task_manager_core.Task:
         return self.task_service.reactivate_task(task_id=task_id, delay=delay)
 
     def create_schedule(
@@ -151,10 +160,10 @@ class Schlange:
         interval: float,
         enabled: bool = True,
         delay: float = 0.0,
-        retry_policy: Optional[core.RetryPolicy] = None,
-        task_retry_policy: Optional[core.RetryPolicy] = None,
+        retry_policy: Optional[task_manager_core.RetryPolicy] = None,
+        task_retry_policy: Optional[task_manager_core.RetryPolicy] = None,
         id: Optional[str] = None,
-    ) -> core.Schedule:
+    ) -> schedule_manager_core.Schedule:
         if retry_policy is None:
             retry_policy = self.default_retry_policy
         if task_retry_policy is None:
@@ -177,12 +186,14 @@ class Schlange:
         LOGGER.info("schedule created: schedule=%r", schedule)
         return schedule
 
-    def schedule(self, schedule_id: str) -> core.Schedule:
+    def schedule(self, schedule_id: str) -> schedule_manager_core.Schedule:
         return self.schedule_service.schedule(schedule_id)
 
-    def schedules(self, enabled: Optional[bool] = None) -> List[core.Schedule]:
+    def schedules(
+        self, enabled: Optional[bool] = None
+    ) -> List[schedule_manager_core.Schedule]:
         return self.schedule_service.list_schedules(
-            core.ScheduleSpecification(enabled=enabled)
+            schedule_manager_core.ScheduleSpecification(enabled=enabled)
         )
 
     def delete_schedule(self, schedule_id: str) -> None:
