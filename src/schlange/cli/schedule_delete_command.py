@@ -17,5 +17,8 @@ class ScheduleDeleteCommand(Command):
 
     @staticmethod
     def run(args: argparse.Namespace) -> None:
-        with schlange.new(args.database_path) as sch:
+        with schlange.new(
+            task_database_path=args.task_database_path,
+            schedule_database_path=args.schedule_database_path,
+        ) as sch:
             sch.delete_schedule(args.schedule_id)

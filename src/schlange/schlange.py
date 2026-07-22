@@ -16,7 +16,8 @@ from schlange.services.task_manager import sqlite as task_manager_sqlite
 
 LOGGER = logging.getLogger(__name__)
 
-DEFAULT_DATABASE_PATH = pathlib.Path("schlange.db")
+DEFAULT_TASK_DATABASE_PATH = pathlib.Path("tasks.db")
+DEFAULT_SCHEDULE_DATABASE_PATH = pathlib.Path("schedules.db")
 DEFAULT_RETRY_POLICY = task_manager_core.RetryPolicy(
     initial_delay=1,
     backoff_factor=2.0,
@@ -67,7 +68,8 @@ class Schlange:
     @contextlib.contextmanager
     def new(
         cls,
-        database_path: pathlib.Path = DEFAULT_DATABASE_PATH,
+        task_database_path: pathlib.Path = DEFAULT_TASK_DATABASE_PATH,
+        schedule_database_path: pathlib.Path = DEFAULT_SCHEDULE_DATABASE_PATH,
         task_handler: Optional[task_manager_core.TaskHandler] = None,
         default_retry_policy: task_manager_core.RetryPolicy = DEFAULT_RETRY_POLICY,
         execution_worker_interval: float = DEFAULT_EXECUTION_WORKER_INTERVAL,
@@ -76,18 +78,25 @@ class Schlange:
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
     ) -> Generator["Schlange", None, None]:
+        read_pool_capacity = calculate_optimal_database_read_pool_capacity(
+            execution_worker_threads
+        )
         with sqlite.Database.open(
-            path=database_path,
-            read_pool_capacity=calculate_optimal_database_read_pool_capacity(
-                execution_worker_threads
-            ),
-        ) as db:
-            db.migrate()
-            task_repository = task_manager_sqlite.TaskRepository(db=db)
+            path=task_database_path,
+            read_pool_capacity=read_pool_capacity,
+        ) as task_db, sqlite.Database.open(
+            path=schedule_database_path,
+            read_pool_capacity=read_pool_capacity,
+        ) as schedule_db:
+            task_db.migrate(migrations_path=task_manager_sqlite.MIGRATIONS_PATH)
+            schedule_db.migrate(migrations_path=schedule_manager_sqlite.MIGRATIONS_PATH)
+            task_repository = task_manager_sqlite.TaskRepository(db=task_db)
             task_service = task_manager_core.TaskService(
                 task_repository=task_repository, task_handler=task_handler
             )
-            schedule_repository = schedule_manager_sqlite.ScheduleRepository(db=db)
+            schedule_repository = schedule_manager_sqlite.ScheduleRepository(
+                db=schedule_db
+            )
             schedule_service = schedule_manager_core.ScheduleService(
                 schedule_repository=schedule_repository,
                 task_service=task_service,

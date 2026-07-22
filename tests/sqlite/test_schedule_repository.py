@@ -16,7 +16,7 @@ class ScheduleRepositoryTest(unittest.TestCase):
         db_path = pathlib.Path(self.dir.name) / "test.db"
         self.db_ctx = sqlite.Database.open(db_path, read_pool_capacity=4)
         self.db = self.db_ctx.__enter__()
-        self.db.migrate()
+        self.db.migrate(migrations_path=schedule_sqlite.MIGRATIONS_PATH)
         self.repo = schedule_sqlite.ScheduleRepository(self.db)
 
     def tearDown(self):

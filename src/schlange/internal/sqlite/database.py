@@ -34,8 +34,6 @@ SQL_UPDATE_CURRENT_SCHEMA_VERSION = """
     SET version = :version
 """
 
-DATABASE_MIGRATIONS_PATH = pathlib.Path(__file__).parent / "migrations"
-
 
 class Database:
 
@@ -95,7 +93,7 @@ class Database:
             with conn.transaction(read_only=read_only) as tx:
                 yield tx
 
-    def migrate(self, migrations_path: pathlib.Path = DATABASE_MIGRATIONS_PATH) -> None:
+    def migrate(self, migrations_path: pathlib.Path) -> None:
         with self.write_pool.acquire() as conn:
             self._migrate(conn, migrations_path)
 

@@ -40,7 +40,8 @@ class BenchCommand(Command):
                 done.set()
 
         with schlange.new(
-            args.database_path,
+            task_database_path=args.task_database_path,
+            schedule_database_path=args.schedule_database_path,
             task_handler=handle_task,
             execution_worker_threads=args.workers,
         ) as sch:

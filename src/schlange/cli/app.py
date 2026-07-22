@@ -21,7 +21,11 @@ class App:
             prog="schlange", formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
         parser.add_argument(
-            "-d", "--database-path", default=schlange.DEFAULT_DATABASE_PATH
+            "--task-database-path", default=schlange.DEFAULT_TASK_DATABASE_PATH
+        )
+        parser.add_argument(
+            "--schedule-database-path",
+            default=schlange.DEFAULT_SCHEDULE_DATABASE_PATH,
         )
         parser.add_argument("-v", "--verbose", action="store_true")
         subparsers = parser.add_subparsers(dest="command", required=True)

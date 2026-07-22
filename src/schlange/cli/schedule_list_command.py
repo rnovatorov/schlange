@@ -22,7 +22,10 @@ class ScheduleListCommand(Command):
     @staticmethod
     def run(args: argparse.Namespace) -> None:
         data_mapper = DataMapper()
-        with schlange.new(args.database_path) as sch:
+        with schlange.new(
+            task_database_path=args.task_database_path,
+            schedule_database_path=args.schedule_database_path,
+        ) as sch:
             for schedule in sch.schedules(
                 enabled=True if args.enabled else False if args.disabled else None
             ):
