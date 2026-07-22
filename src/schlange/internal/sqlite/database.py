@@ -70,7 +70,6 @@ class Database:
                 read_pool=read_pool,
                 write_pool=write_pool,
                 sync_write_pool=sync_write_pool,
-                migrations_path=DATABASE_MIGRATIONS_PATH,
             )
 
     def __init__(
@@ -78,12 +77,10 @@ class Database:
         read_pool: ConnectionPool,
         write_pool: ConnectionPool,
         sync_write_pool: ConnectionPool,
-        migrations_path: pathlib.Path,
     ) -> None:
         self.read_pool = read_pool
         self.write_pool = write_pool
         self.sync_write_pool = sync_write_pool
-        self.migrations_path = migrations_path
 
     @contextlib.contextmanager
     def transaction(
@@ -98,18 +95,18 @@ class Database:
             with conn.transaction(read_only=read_only) as tx:
                 yield tx
 
-    def migrate(self) -> None:
+    def migrate(self, migrations_path: pathlib.Path = DATABASE_MIGRATIONS_PATH) -> None:
         with self.write_pool.acquire() as conn:
-            self._migrate(conn)
+            self._migrate(conn, migrations_path)
 
-    def _migrate(self, conn: Connection) -> None:
+    def _migrate(self, conn: Connection, migrations_path: pathlib.Path) -> None:
         with conn.transaction() as tx:
             tx.execute(SQL_CREATE_SCHEMA_VERSION_TABLE)
             tx.execute(SQL_SET_DEFAULT_SCHEMA_VERSION)
             schema_version = tx.query_row(SQL_SELECT_CURRENT_SCHEMA_VERSION)[0]
 
         scripts = []
-        for path in self.migrations_path.glob("*_*.sql"):
+        for path in migrations_path.glob("*_*.sql"):
             version = int(path.name.split("_", maxsplit=1)[0])
             if version > schema_version:
                 scripts.append((version, path))
