@@ -49,7 +49,13 @@ At-least-once everywhere. Handlers must be idempotent. No fencing tokens. No dis
 
 ## Broker
 
-One impl, multi-process capable. Protocol: `publish(payload: bytes) -> str` only. Subscribe is concrete-impl-only, exposed as a context manager — `subscribe(handler: Callable[[Message], None])`; the broker delivers messages to the handler while the context is active, stops on exit, waits for in-flight handler to complete. Handler contract: raise = nack, return = ack, one message at a time. Consumer death via session heartbeats + leader-elected sweeper.
+RPC-style Protocol (7 RPCs): publish, claim, ack, nack, create_session, heartbeat, close_session. Request/response dataclasses, no callbacks or context managers. Direct exchange: messages carry `routing_key` (publisher-set), sessions carry `queue` (consumer subscription). Broker matches them. Competing consumers: atomic claim via `UPDATE...JOIN...RETURNING`. Dead-letter is a boolean flag on messages, not a routing key change. Nack sets flag, releases claim. No backoff or retry limit in broker — consumer-side concern.
+
+Push-based delivery (subscribe with handler) is NOT on the Protocol. Consumer-side driving adapter (Phase 4) orchestrates RPCs into a delivery loop. Consuming service core defines a driving port; adapter bridges.
+
+Protocol is internal to our SQLite broker. External brokers implement the consuming service's port, not this Protocol. The port is the seam for "bring your own broker."
+
+Consumer death via session heartbeats + leader-elected sweeper.
 
 ## Lease
 
