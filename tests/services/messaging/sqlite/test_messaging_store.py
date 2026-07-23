@@ -16,7 +16,7 @@ class StoreTest(unittest.TestCase):
         self.db_ctx = sqlite.Database.open(db_path, read_pool_capacity=4)
         self.db = self.db_ctx.__enter__()
         self.db.migrate(migrations_path=messaging_sqlite.MIGRATIONS_PATH)
-        self.store = messaging_sqlite.MessagingStore(self.db)
+        self.store = messaging_sqlite.Store(self.db)
 
     def tearDown(self):
         self.db_ctx.__exit__(None, None, None)

@@ -1,6 +1,6 @@
 import unittest
 
-from schlange.services.leases.background.lease_reaper import LeaseReaper
+from schlange.services.leases.background.reaper import Reaper
 
 
 class FakeService:
@@ -16,7 +16,7 @@ class ReaperTest(unittest.TestCase):
 
     def test_work_calls_delete_expired(self):
         service = FakeService()
-        reaper = LeaseReaper(service=service, interval=1.0)
+        reaper = Reaper(service=service, interval=1.0)
         reaper.work()
         self.assertEqual(service.delete_expired_calls, 1)
 

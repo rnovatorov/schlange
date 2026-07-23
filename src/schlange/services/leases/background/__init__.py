@@ -1,5 +1,5 @@
-from .lease_reaper import LeaseReaper
+from .reaper import Reaper
 
 __all__ = [
-    "LeaseReaper",
+    "Reaper",
 ]

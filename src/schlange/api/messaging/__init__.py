@@ -6,10 +6,10 @@ from .create_session_request import CreateSessionRequest
 from .create_session_response import CreateSessionResponse
 from .heartbeat_session_request import HeartbeatSessionRequest
 from .message import Message
-from .messaging_server import MessagingServer
 from .nack_message_request import NackMessageRequest
 from .publish_message_request import PublishMessageRequest
 from .publish_message_response import PublishMessageResponse
+from .server import Server
 
 __all__ = [
     "AckMessageRequest",
@@ -20,7 +20,7 @@ __all__ = [
     "CreateSessionResponse",
     "HeartbeatSessionRequest",
     "Message",
-    "MessagingServer",
+    "Server",
     "NackMessageRequest",
     "PublishMessageRequest",
     "PublishMessageResponse",

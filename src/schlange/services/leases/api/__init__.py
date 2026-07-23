@@ -1,5 +1,5 @@
-from .lease_server import LeaseServer
+from .server import Server
 
 __all__ = [
-    "LeaseServer",
+    "Server",
 ]

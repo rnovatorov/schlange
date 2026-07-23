@@ -5,7 +5,7 @@ from .message import Message
 from .session import Session
 
 
-class MessagingStore(Protocol):
+class Store(Protocol):
     """
     Messaging persistence interface. `now` is passed in so all time
     logic lives in the service; the caller supplies the id for

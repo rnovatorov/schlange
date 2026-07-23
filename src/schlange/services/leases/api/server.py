@@ -5,13 +5,13 @@ from schlange.services.leases import core
 
 
 @dataclasses.dataclass
-class LeaseServer:
+class Server:
     """
     Thin public-facing adapter. Wraps a leases core service,
     packs core return values into the gRPC-style response dataclasses.
     """
 
-    service: core.LeaseService
+    service: core.Service
 
     def acquire(
         self, request: leases.AcquireLeaseRequest

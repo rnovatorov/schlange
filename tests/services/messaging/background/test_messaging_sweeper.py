@@ -8,11 +8,11 @@ from schlange.api import leases
 from schlange.internal import sqlite
 from schlange.services.messaging import core
 from schlange.services.messaging import sqlite as messaging_sqlite
-from schlange.services.messaging.background import MessagingSweeper
+from schlange.services.messaging.background import Sweeper
 
 
-class AlwaysLeaderLeaseServer:
-    """Fake LeaseServer that always grants the lease."""
+class AlwaysLeaderServer:
+    """Fake Server that always grants the lease."""
 
     def acquire(
         self, request: leases.AcquireLeaseRequest
@@ -39,8 +39,8 @@ class AlwaysLeaderLeaseServer:
         raise NotImplementedError
 
 
-class NeverLeaderLeaseServer:
-    """Fake LeaseServer that always denies the lease."""
+class NeverLeaderServer:
+    """Fake Server that always denies the lease."""
 
     def acquire(
         self, request: leases.AcquireLeaseRequest
@@ -69,7 +69,7 @@ class SweeperTest(unittest.TestCase):
         self.db_ctx = sqlite.Database.open(db_path, read_pool_capacity=4)
         self.db = self.db_ctx.__enter__()
         self.db.migrate(migrations_path=messaging_sqlite.MIGRATIONS_PATH)
-        self.store = messaging_sqlite.MessagingStore(self.db)
+        self.store = messaging_sqlite.Store(self.db)
 
     def tearDown(self):
         self.db_ctx.__exit__(None, None, None)
@@ -78,8 +78,8 @@ class SweeperTest(unittest.TestCase):
     def _now(self) -> datetime.datetime:
         return datetime.datetime.now(datetime.UTC)
 
-    def _make_service(self, lease_server: leases.LeaseServer) -> core.MessagingService:
-        return core.MessagingService(
+    def _make_service(self, lease_server: leases.Server) -> core.Service:
+        return core.Service(
             store=self.store,
             lease_server=lease_server,
             holder_id="sweeper-1",
@@ -87,8 +87,8 @@ class SweeperTest(unittest.TestCase):
         )
 
     def test_sweep_as_leader(self):
-        service = self._make_service(AlwaysLeaderLeaseServer())
-        sweeper = MessagingSweeper(service=service, interval=1.0)
+        service = self._make_service(AlwaysLeaderServer())
+        sweeper = Sweeper(service=service, interval=1.0)
         stale_at = self._now() - datetime.timedelta(seconds=10)
         stale_id = str(uuid.uuid4())
         self.store.create_session(stale_id, "orders", False, stale_at)
@@ -100,8 +100,8 @@ class SweeperTest(unittest.TestCase):
         self.assertEqual(self.store.find_stale_sessions(self._now()), [])
 
     def test_sweep_not_leader(self):
-        service = self._make_service(NeverLeaderLeaseServer())
-        sweeper = MessagingSweeper(service=service, interval=1.0)
+        service = self._make_service(NeverLeaderServer())
+        sweeper = Sweeper(service=service, interval=1.0)
         stale_at = self._now() - datetime.timedelta(seconds=10)
         stale_id = str(uuid.uuid4())
         self.store.create_session(stale_id, "orders", False, stale_at)

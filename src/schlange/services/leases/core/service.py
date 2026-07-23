@@ -2,17 +2,17 @@ import dataclasses
 import datetime
 from typing import Optional
 
-from .lease_store import LeaseStore
+from .store import Store
 
 
 @dataclasses.dataclass
-class LeaseService:
+class Service:
     """
     Stateless lease business logic. Owns the clock; delegates
-    persistence to a LeaseStore.
+    persistence to a Store.
     """
 
-    store: LeaseStore
+    store: Store
 
     def acquire(self, key: str, holder: str, ttl: float) -> Optional[datetime.datetime]:
         return self.store.acquire(key, holder, self._now(), ttl)

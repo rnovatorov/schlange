@@ -1,7 +1,7 @@
 from .constants import MIGRATIONS_PATH
-from .messaging_store import MessagingStore
+from .store import Store
 
 __all__ = [
     "MIGRATIONS_PATH",
-    "MessagingStore",
+    "Store",
 ]

@@ -6,19 +6,19 @@ from typing import Optional
 from schlange.api import leases
 
 from .message import Message
-from .messaging_store import MessagingStore
+from .store import Store
 
 
 @dataclasses.dataclass
-class MessagingService:
+class Service:
     """
     Stateless messaging business logic. Owns the clock; delegates
-    persistence to a MessagingStore. Sweep leader election is
-    delegated to the leases API.
+    persistence to a Store. Sweep leader election is delegated to
+    the leases API.
     """
 
-    store: MessagingStore
-    lease_server: leases.LeaseServer
+    store: Store
+    lease_server: leases.Server
     holder_id: str
     session_timeout: float = 5.0
     lease_key: str = "messaging-sweeper"

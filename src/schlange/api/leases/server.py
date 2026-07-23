@@ -9,7 +9,7 @@ from .refresh_lease_response import RefreshLeaseResponse
 from .release_lease_request import ReleaseLeaseRequest
 
 
-class LeaseServer(Protocol):
+class Server(Protocol):
     """
     Etcd-compatible leases API, gRPC-style: each method takes a
     single request dataclass and returns a single response dataclass

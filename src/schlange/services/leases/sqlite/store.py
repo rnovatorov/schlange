@@ -46,7 +46,7 @@ SQL_DELETE_EXPIRED = """
 """
 
 
-class LeaseStore:
+class Store:
 
     def __init__(self, db: sqlite.Database) -> None:
         self.db = db

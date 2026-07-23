@@ -1,5 +1,5 @@
-from .messaging_sweeper import MessagingSweeper
+from .sweeper import Sweeper
 
 __all__ = [
-    "MessagingSweeper",
+    "Sweeper",
 ]

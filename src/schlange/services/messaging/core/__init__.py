@@ -1,11 +1,11 @@
 from .message import Message
-from .messaging_service import MessagingService
-from .messaging_store import MessagingStore
+from .service import Service
 from .session import Session
+from .store import Store
 
 __all__ = [
     "Message",
-    "MessagingService",
-    "MessagingStore",
+    "Service",
     "Session",
+    "Store",
 ]

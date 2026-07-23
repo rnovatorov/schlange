@@ -1,7 +1,7 @@
-from .lease_service import LeaseService
-from .lease_store import LeaseStore
+from .service import Service
+from .store import Store
 
 __all__ = [
-    "LeaseService",
-    "LeaseStore",
+    "Service",
+    "Store",
 ]

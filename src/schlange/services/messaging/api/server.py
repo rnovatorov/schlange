@@ -5,13 +5,13 @@ from schlange.services.messaging import core
 
 
 @dataclasses.dataclass
-class MessagingServer:
+class Server:
     """
     Thin public-facing adapter. Wraps a messaging core service,
     packs core return values into the gRPC-style response dataclasses.
     """
 
-    service: core.MessagingService
+    service: core.Service
 
     def publish(
         self, request: messaging.PublishMessageRequest

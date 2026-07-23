@@ -2,7 +2,7 @@ import datetime
 from typing import Optional, Protocol
 
 
-class LeaseStore(Protocol):
+class Store(Protocol):
     """
     Lease persistence interface. `now` is passed in so all time logic
     lives in the service. acquire/refresh return the new expires_at

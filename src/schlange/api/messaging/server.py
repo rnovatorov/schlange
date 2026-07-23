@@ -12,7 +12,7 @@ from .publish_message_request import PublishMessageRequest
 from .publish_message_response import PublishMessageResponse
 
 
-class MessagingServer(Protocol):
+class Server(Protocol):
     """
     Public messaging API, gRPC-style: each method takes a single
     request dataclass and returns a single response dataclass

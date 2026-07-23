@@ -1,5 +1,5 @@
-from .messaging_server import MessagingServer
+from .server import Server
 
 __all__ = [
-    "MessagingServer",
+    "Server",
 ]
