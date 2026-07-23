@@ -4,11 +4,11 @@ Decisions, not rationale. Build order is in [ROADMAP.md](ROADMAP.md).
 
 ## Services
 
-- **TaskManager** — task lifecycle, owns outbox publisher. Leader-elected.
-- **TaskExecutor** — consumes from broker, executes, reports back. Scales horizontally.
-- **ScheduleManager** — fires schedules by creating tasks. Leader-elected.
-- **MessageBroker** — durable queue, session-based consumer death detection, leader-elected sweeper.
-- **LeaseManager** — leader election primitive.
+- **tasks** — task lifecycle, owns outbox publisher. Leader-elected.
+- **dispatch** — consumes from broker, executes, reports back. Scales horizontally.
+- **schedules** — fires schedules by creating tasks. Leader-elected.
+- **messaging** — durable queue, session-based consumer death detection, leader-elected sweeper. Infrastructure, not a bounded context.
+- **leases** — leader election primitive.
 
 ## Service structure
 
@@ -33,7 +33,7 @@ src/schlange/
 └── cli/
 ```
 
-Contracts are defined in `schlange/api/<service>/`. The service's `api/server.py` satisfies them structurally; it does not import or inherit them. Contracts are written lazily — only when there's actual cross-service consumption to drive them, not speculatively for symmetry.
+Contracts are defined in `schlange/api/<service>/`. The service's `api/<service>_server.py` satisfies them structurally; it does not import or inherit them. Contracts are written lazily — only when there's actual cross-service consumption to drive them, not speculatively for symmetry.
 
 ## Data
 
@@ -45,7 +45,7 @@ Threads-die-process-dies. `threading.excepthook` logs the traceback, then calls 
 
 ## Reliability
 
-At-least-once everywhere. Handlers must be idempotent. No fencing tokens. No distributed transactions; the outbox pattern prevents orphans (TaskManager writes task row + outbox row in one transaction; a worker publishes outbox rows to the broker and marks them sent). No sagas.
+At-least-once everywhere. Handlers must be idempotent. No fencing tokens. No distributed transactions; the outbox pattern prevents orphans (tasks writes task row + outbox row in one transaction; a worker publishes outbox rows to the broker and marks them sent).
 
 ## Broker
 
@@ -55,9 +55,9 @@ One impl, multi-process capable. Protocol: `publish(payload: bytes) -> str` only
 
 Etcd-compatible API: `acquire(key, holder, ttl)`, `refresh(key, holder)`, `release(key, holder)`, `is_holder(key, holder)`. Implementable on SQLite, etcd, Redis.
 
-Lease holder pattern: generic background worker drives a lease via a 3-method interface (acquire/renew/release). Services needing election implement this on their core (delegating to lease manager). Work drivers are lease-unaware — they call a work method on the core; the core no-ops (returns early) if not leader.
+Lease holder pattern: generic background worker drives a lease via a 3-method interface (acquire/renew/release). Services needing election implement this on their core (delegating to leases). Work drivers are lease-unaware — they call a work method on the core; the core no-ops (returns early) if not leader.
 
-Lease manager accepted as SPOF (k8s analogy).
+Leases accepted as SPOF (k8s analogy).
 
 ## Imports
 
@@ -65,4 +65,4 @@ Go-style. Cross-package: `from parent import package`, then `package.Name`. Rela
 
 ## Out of scope
 
-External broker (RabbitMQ/Redis), multi-node deployment, fencing tokens, lease state caching, speculative contract packages, backwards compatibility, sagas.
+External broker (RabbitMQ/Redis), multi-node deployment, fencing tokens, lease state caching, speculative contract packages, backwards compatibility.

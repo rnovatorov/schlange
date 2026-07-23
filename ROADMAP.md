@@ -6,15 +6,15 @@ Build order. Architecture in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Monolith refactored into services layout, Go-style imports.
 
-## Phase 2 — LeaseManager
+## Phase 2 — Leases
 
 Foundation: broker sweeper and outbox publisher both need leader election.
 
-Lease manager service (own DB, etcd-compatible API), generic lease worker, lease holder interface. Tested in isolation.
+Leases service (own DB, etcd-compatible API), generic lease worker, lease holder interface. Tested in isolation.
 
 Open: TTL semantics, reaper strategy (query-time vs background), test approach.
 
-## Phase 3 — MessageBroker
+## Phase 3 — Messaging
 
 Depends on: Phase 2.
 
@@ -26,15 +26,15 @@ Open: schema details, sweeper cadence, session lifecycle.
 
 Depends on: Phases 2, 3.
 
-TaskManager public contract, refactored core (lease holder + outbox publish), outbox worker (lease-unaware), TaskExecutor consuming from broker, rewired composition root.
+tasks public contract, refactored core (lease holder + outbox publish), outbox worker (lease-unaware), dispatch consuming from broker, rewired composition root.
 
 Milestone: create-task-then-execute works through the new architecture.
 
-## Phase 5 — ScheduleManager migration
+## Phase 5 — Schedules migration
 
 Depends on: Phase 4.
 
-ScheduleManager refactored to the same pattern (api/core/sqlite/background), leader-elected firing.
+Schedules refactored to the same pattern (api/core/sqlite/background), leader-elected firing.
 
 Milestone: schedule demo works through the new path.
 
