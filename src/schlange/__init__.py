@@ -9,18 +9,18 @@ from schlange.schlange import (
     Schlange,
     new,
 )
-from schlange.services.schedule_manager import core as schedule_manager_core
-from schlange.services.task_manager import core as task_manager_core
+from schlange.services.schedules import core as schedules_core
+from schlange.services.tasks import core as tasks_core
 
-CleanupPolicy = task_manager_core.CleanupPolicy
+CleanupPolicy = tasks_core.CleanupPolicy
 DTO = core.DTO
-RetryPolicy = task_manager_core.RetryPolicy
-Schedule = schedule_manager_core.Schedule
-ScheduleFiring = schedule_manager_core.ScheduleFiring
-Task = task_manager_core.Task
-TaskExecution = task_manager_core.TaskExecution
-TaskHandler = task_manager_core.TaskHandler
-TaskState = task_manager_core.TaskState
+RetryPolicy = tasks_core.RetryPolicy
+Schedule = schedules_core.Schedule
+ScheduleFiring = schedules_core.ScheduleFiring
+Task = tasks_core.Task
+TaskExecution = tasks_core.TaskExecution
+TaskHandler = tasks_core.TaskHandler
+TaskState = tasks_core.TaskState
 
 logging.getLogger(__name__).handlers = [logging.NullHandler()]
 

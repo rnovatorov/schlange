@@ -8,9 +8,9 @@ setuptools.setup(
     package_dir={"": "src"},
     package_data={
         "schlange": [
-            "services/lease_manager/sqlite/migrations/*.sql",
-            "services/schedule_manager/sqlite/migrations/*.sql",
-            "services/task_manager/sqlite/migrations/*.sql",
+            "services/leases/sqlite/migrations/*.sql",
+            "services/schedules/sqlite/migrations/*.sql",
+            "services/tasks/sqlite/migrations/*.sql",
         ],
     },
     url="https://github.com/rnovatorov/schlange",
