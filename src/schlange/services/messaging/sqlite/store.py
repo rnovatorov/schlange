@@ -116,7 +116,7 @@ class Store:
             "session_id": session_id,
             "now": self.data_mapper.dump_timestamp(now),
         }
-        with self.db.transaction() as tx:
+        with self.db.transaction(synchronous=False) as tx:
             try:
                 row = tx.query_row(SQL_CLAIM, params)
             except sqlite.NoRowsError:
@@ -124,11 +124,11 @@ class Store:
             return self._collect_message(row)
 
     def ack(self, message_id: str) -> None:
-        with self.db.transaction() as tx:
+        with self.db.transaction(synchronous=False) as tx:
             tx.execute(SQL_ACK, {"message_id": message_id})
 
     def nack(self, message_id: str) -> None:
-        with self.db.transaction() as tx:
+        with self.db.transaction(synchronous=False) as tx:
             tx.execute(SQL_NACK, {"message_id": message_id})
 
     def create_session(
@@ -153,7 +153,7 @@ class Store:
             "session_id": session_id,
             "heartbeat_at": self.data_mapper.dump_timestamp(now),
         }
-        with self.db.transaction() as tx:
+        with self.db.transaction(synchronous=False) as tx:
             tx.execute(SQL_HEARTBEAT, params)
 
     def close_session(self, session_id: str) -> None:

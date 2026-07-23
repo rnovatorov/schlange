@@ -33,7 +33,7 @@ src/schlange/
 └── cli/
 ```
 
-Contracts are defined in `schlange/api/<service>/`. The service's adapter (e.g. `services/leases/api/lease_server.py`) satisfies them structurally; it does not import or inherit them. Contracts are written lazily — only when there's actual cross-service consumption to drive them, not speculatively for symmetry.
+Contracts are defined in `schlange/api/<service>/`. The service's adapter (e.g. `services/leases/api/server.py`) satisfies them structurally; it does not import or inherit them. Contracts are written lazily — only when there's actual cross-service consumption to drive them, not speculatively for symmetry.
 
 ## Data
 
@@ -55,7 +55,7 @@ Push-based delivery (subscribe with handler) is NOT on the Protocol. Consumer-si
 
 Protocol is internal to our SQLite broker. External brokers implement the consuming service's port, not this Protocol. The port is the seam for "bring your own broker."
 
-Consumer death via session heartbeats + periodic sweeper.
+Consumer death via session heartbeats + periodic sweeper. Publish uses `synchronous=FULL` (durable — outbox cannot protect cross-DB). Consume (claim, ack, nack) uses `synchronous=NORMAL` (at-least-once redelivery is the contract).
 
 ## Lease
 

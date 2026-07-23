@@ -5,6 +5,7 @@ import time
 import schlange
 
 from .bench_command import BenchCommand
+from .bench_messaging_command import BenchMessagingCommand
 from .schedule_command import ScheduleCommand
 from .stress_command import StressCommand
 from .task_command import TaskCommand
@@ -33,6 +34,7 @@ class App:
             TaskCommand,
             ScheduleCommand,
             BenchCommand,
+            BenchMessagingCommand,
             StressCommand,
         ]:
             command.register(subparsers)
@@ -47,6 +49,8 @@ class App:
                 ScheduleCommand.run(self.args)
             case "bench":
                 BenchCommand.run(self.args)
+            case "bench-messaging":
+                BenchMessagingCommand.run(self.args)
             case "stress":
                 StressCommand.run(self.args)
             case _:

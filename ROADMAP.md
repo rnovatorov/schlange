@@ -16,7 +16,7 @@ Leases service (own DB, etcd-compatible API). Tested in isolation.
 
 Depends on: Phase 2.
 
-Messaging service (own DB), RPC-style Protocol (publish, claim, ack, nack, session lifecycle), competing consumers, dead-letter boolean, session-based consumer death detection, leader-elected sweeper. Tested in isolation.
+Messaging service (own DB), RPC-style Protocol (publish, claim, ack, nack, session lifecycle), competing consumers, dead-letter boolean, session-based consumer death detection, periodic sweeper. Tested in isolation.
 
 ## Phase 4 — Integration
 
