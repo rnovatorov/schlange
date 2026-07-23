@@ -4,61 +4,10 @@ import tempfile
 import unittest
 import uuid
 
-from schlange.api import leases
 from schlange.internal import sqlite
 from schlange.services.messaging import core
 from schlange.services.messaging import sqlite as messaging_sqlite
 from schlange.services.messaging.background import Sweeper
-
-
-class AlwaysLeaderServer:
-    """Fake Server that always grants the lease."""
-
-    def acquire(
-        self, request: leases.AcquireLeaseRequest
-    ) -> leases.AcquireLeaseResponse:
-        return leases.AcquireLeaseResponse(
-            lease=leases.Lease(
-                key=request.key,
-                holder=request.holder,
-                expires_at=datetime.datetime.now(datetime.UTC),
-            )
-        )
-
-    def refresh(
-        self, request: leases.RefreshLeaseRequest
-    ) -> leases.RefreshLeaseResponse:
-        raise NotImplementedError
-
-    def release(self, request: leases.ReleaseLeaseRequest) -> None:
-        raise NotImplementedError
-
-    def is_holder(
-        self, request: leases.IsHolderLeaseRequest
-    ) -> leases.IsHolderLeaseResponse:
-        raise NotImplementedError
-
-
-class NeverLeaderServer:
-    """Fake Server that always denies the lease."""
-
-    def acquire(
-        self, request: leases.AcquireLeaseRequest
-    ) -> leases.AcquireLeaseResponse:
-        return leases.AcquireLeaseResponse(lease=None)
-
-    def refresh(
-        self, request: leases.RefreshLeaseRequest
-    ) -> leases.RefreshLeaseResponse:
-        raise NotImplementedError
-
-    def release(self, request: leases.ReleaseLeaseRequest) -> None:
-        raise NotImplementedError
-
-    def is_holder(
-        self, request: leases.IsHolderLeaseRequest
-    ) -> leases.IsHolderLeaseResponse:
-        raise NotImplementedError
 
 
 class SweeperTest(unittest.TestCase):
@@ -78,38 +27,39 @@ class SweeperTest(unittest.TestCase):
     def _now(self) -> datetime.datetime:
         return datetime.datetime.now(datetime.UTC)
 
-    def _make_service(self, lease_server: leases.Server) -> core.Service:
-        return core.Service(
-            store=self.store,
-            lease_server=lease_server,
-            holder_id="sweeper-1",
-            session_timeout=5.0,
-        )
-
-    def test_sweep_as_leader(self):
-        service = self._make_service(AlwaysLeaderServer())
+    def test_sweep_cleans_up_stale_and_preserves_active(self):
+        now = self._now()
+        service = core.Service(store=self.store, session_timeout=5.0)
         sweeper = Sweeper(service=service, interval=1.0)
-        stale_at = self._now() - datetime.timedelta(seconds=10)
-        stale_id = str(uuid.uuid4())
-        self.store.create_session(stale_id, "orders", False, stale_at)
-        self.assertIn(
-            stale_id,
-            self.store.find_stale_sessions(self._now() - datetime.timedelta(seconds=5)),
-        )
-        sweeper.work()
-        self.assertEqual(self.store.find_stale_sessions(self._now()), [])
 
-    def test_sweep_not_leader(self):
-        service = self._make_service(NeverLeaderServer())
-        sweeper = Sweeper(service=service, interval=1.0)
-        stale_at = self._now() - datetime.timedelta(seconds=10)
-        stale_id = str(uuid.uuid4())
-        self.store.create_session(stale_id, "orders", False, stale_at)
+        # Stale session (heartbeat 10s ago) with a claimed message.
+        stale_at = now - datetime.timedelta(seconds=10)
+        stale_session_id = str(uuid.uuid4())
+        stale_message_id = str(uuid.uuid4())
+        self.store.create_session(stale_session_id, "orders", False, stale_at)
+        self.store.publish(stale_message_id, "orders", b"stale", stale_at)
+        self.store.claim(stale_session_id, stale_at)
+
+        # Active session (heartbeat now) with a claimed message.
+        fresh_session_id = str(uuid.uuid4())
+        fresh_message_id = str(uuid.uuid4())
+        self.store.create_session(fresh_session_id, "orders", False, now)
+        self.store.publish(fresh_message_id, "orders", b"fresh", now)
+        self.store.claim(fresh_session_id, now)
+
         sweeper.work()
-        self.assertIn(
-            stale_id,
-            self.store.find_stale_sessions(self._now() - datetime.timedelta(seconds=5)),
-        )
+
+        # Stale session cleaned up: session deleted, claim released.
+        self.assertIsNone(self.store.find_session(stale_session_id))
+        stale_message = self.store.find_message(stale_message_id)
+        self.assertIsNotNone(stale_message)
+        self.assertIsNone(stale_message.claimed_by)
+
+        # Active session preserved: session exists, claim intact.
+        self.assertIsNotNone(self.store.find_session(fresh_session_id))
+        fresh_message = self.store.find_message(fresh_message_id)
+        self.assertIsNotNone(fresh_message)
+        self.assertEqual(fresh_message.claimed_by, fresh_session_id)
 
 
 if __name__ == "__main__":

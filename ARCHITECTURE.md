@@ -7,7 +7,7 @@ Decisions, not rationale. Build order is in [ROADMAP.md](ROADMAP.md).
 - **tasks** — task lifecycle, owns outbox publisher. Leader-elected.
 - **dispatch** — consumes from broker, executes, reports back. Scales horizontally.
 - **schedules** — fires schedules by creating tasks. Leader-elected.
-- **messaging** — durable queue, session-based consumer death detection, leader-elected sweeper. Built-in; replaceable by external broker.
+- **messaging** — durable queue, session-based consumer death detection, periodic sweeper. Built-in; replaceable by external broker.
 - **leases** — leader election primitive.
 
 ## Service structure
@@ -55,7 +55,7 @@ Push-based delivery (subscribe with handler) is NOT on the Protocol. Consumer-si
 
 Protocol is internal to our SQLite broker. External brokers implement the consuming service's port, not this Protocol. The port is the seam for "bring your own broker."
 
-Consumer death via session heartbeats + leader-elected sweeper.
+Consumer death via session heartbeats + periodic sweeper.
 
 ## Lease
 

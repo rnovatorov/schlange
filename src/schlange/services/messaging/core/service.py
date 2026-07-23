@@ -3,8 +3,6 @@ import datetime
 import uuid
 from typing import Optional
 
-from schlange.api import leases
-
 from .message import Message
 from .store import Store
 
@@ -13,16 +11,11 @@ from .store import Store
 class Service:
     """
     Stateless messaging business logic. Owns the clock; delegates
-    persistence to a Store. Sweep leader election is delegated to
-    the leases API.
+    persistence to a Store.
     """
 
     store: Store
-    lease_server: leases.Server
-    holder_id: str
     session_timeout: float = 5.0
-    lease_key: str = "messaging-sweeper"
-    lease_ttl: float = 5.0
 
     def publish(self, routing_key: str, payload: bytes) -> str:
         message_id = str(uuid.uuid4())
@@ -50,16 +43,6 @@ class Service:
         self.store.close_session(session_id)
 
     def sweep(self) -> None:
-        response = self.lease_server.acquire(
-            leases.AcquireLeaseRequest(
-                key=self.lease_key,
-                holder=self.holder_id,
-                ttl=self.lease_ttl,
-            )
-        )
-        if response.lease is None:
-            return
-
         threshold = self._now() - datetime.timedelta(seconds=self.session_timeout)
         stale_session_ids = self.store.find_stale_sessions(threshold)
         for session_id in stale_session_ids:
