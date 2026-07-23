@@ -9,6 +9,7 @@ setuptools.setup(
     package_data={
         "schlange": [
             "services/leases/sqlite/migrations/*.sql",
+            "services/messaging/sqlite/migrations/*.sql",
             "services/schedules/sqlite/migrations/*.sql",
             "services/tasks/sqlite/migrations/*.sql",
         ],
