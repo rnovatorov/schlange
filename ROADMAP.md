@@ -10,15 +10,13 @@ Monolith refactored into services layout, Go-style imports.
 
 Foundation: broker sweeper and outbox publisher both need leader election.
 
-Leases service (own DB, etcd-compatible API), generic lease worker, lease holder interface. Tested in isolation.
-
-Open: TTL semantics, reaper strategy (query-time vs background), test approach.
+Leases service (own DB, etcd-compatible API). Tested in isolation.
 
 ## Phase 3 — Messaging
 
 Depends on: Phase 2.
 
-Broker service (own DB), publish on protocol, subscribe via context manager (concrete-impl-only), session-based consumer death detection, leader-elected sweeper. Tested in isolation, no integration yet.
+Messaging service (own DB), publish on protocol, subscribe via context manager (concrete-impl-only), session-based consumer death detection, leader-elected sweeper. Tested in isolation, no integration yet.
 
 Open: schema details, sweeper cadence, session lifecycle.
 
@@ -26,7 +24,7 @@ Open: schema details, sweeper cadence, session lifecycle.
 
 Depends on: Phases 2, 3.
 
-tasks public contract, refactored core (lease holder + outbox publish), outbox worker (lease-unaware), dispatch consuming from broker, rewired composition root.
+tasks public contract, generic lease worker, lease holder interface, refactored core (lease holder + outbox publish), outbox worker (lease-unaware), dispatch consuming from broker, rewired composition root.
 
 Milestone: create-task-then-execute works through the new architecture.
 
@@ -48,7 +46,7 @@ Milestone: N-process single-node works. Performance characterized.
 
 ## Beyond
 
-Not planned. External broker, multi-node — far future.
+Sagas, external broker, multi-node — far future.
 
 ## Rules
 

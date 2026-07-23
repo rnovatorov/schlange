@@ -7,7 +7,7 @@ Decisions, not rationale. Build order is in [ROADMAP.md](ROADMAP.md).
 - **tasks** — task lifecycle, owns outbox publisher. Leader-elected.
 - **dispatch** — consumes from broker, executes, reports back. Scales horizontally.
 - **schedules** — fires schedules by creating tasks. Leader-elected.
-- **messaging** — durable queue, session-based consumer death detection, leader-elected sweeper. Infrastructure, not a bounded context.
+- **messaging** — durable queue, session-based consumer death detection, leader-elected sweeper. Built-in; replaceable by external broker.
 - **leases** — leader election primitive.
 
 ## Service structure
@@ -33,7 +33,7 @@ src/schlange/
 └── cli/
 ```
 
-Contracts are defined in `schlange/api/<service>/`. The service's `api/<service>_server.py` satisfies them structurally; it does not import or inherit them. Contracts are written lazily — only when there's actual cross-service consumption to drive them, not speculatively for symmetry.
+Contracts are defined in `schlange/api/<service>/`. The service's adapter (e.g. `services/leases/api/lease_server.py`) satisfies them structurally; it does not import or inherit them. Contracts are written lazily — only when there's actual cross-service consumption to drive them, not speculatively for symmetry.
 
 ## Data
 
@@ -65,4 +65,4 @@ Go-style. Cross-package: `from parent import package`, then `package.Name`. Rela
 
 ## Out of scope
 
-External broker (RabbitMQ/Redis), multi-node deployment, fencing tokens, lease state caching, speculative contract packages, backwards compatibility.
+Fencing tokens, lease state caching, speculative contract packages, backwards compatibility.
