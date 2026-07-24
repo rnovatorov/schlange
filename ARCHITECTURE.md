@@ -45,7 +45,7 @@ Threads-die-process-dies. `threading.excepthook` logs the traceback, then calls 
 
 ## Reliability
 
-At-least-once everywhere. Handlers must be idempotent. No fencing tokens. No distributed transactions. The Dispatcher begins an execution, publishes to the broker (publish-before-commit), and waits for `end_execution` before beginning the next — one outstanding execution per task. `end_execution` is idempotent by execution id; duplicate calls from redelivery are no-ops. No leases or timeouts — broker session-death detection drives redelivery, which recovers crashed executors.
+At-least-once everywhere. Handlers must be idempotent. No fencing tokens. No distributed transactions. The Dispatcher begins an execution, publishes to the broker (publish-before-commit), and won't begin another until `end_execution` arrives — one outstanding execution per task, enforced by a domain guard (`TaskExecutionNotEndedYetError`) and an `execution_in_progress` query filter. `end_execution` is idempotent by execution seq_num; duplicate calls from redelivery are no-ops. No leases or timeouts on executions — broker session-death detection drives redelivery, which recovers crashed executors.
 
 ## Broker
 
@@ -61,7 +61,7 @@ Consumer death via session heartbeats + periodic sweeper. Publish uses `synchron
 
 Etcd-compatible API: `acquire(key, holder, ttl)`, `refresh(key, holder)`, `release(key, holder)`, `is_holder(key, holder)`. Implementable on SQLite, etcd, Redis.
 
-Lease holder pattern: each leader-gated worker owns its lease key and spawns a refresher thread (acquire on start, refresh every tick, let expire on death). The worker's business logic checks `is_holder(key, holder)` each tick and no-ops if not leader. Per-worker lease keys (e.g. `tasks-dispatcher`, `tasks-sweeper`). No generic abstraction — concrete per service.
+Lease holder pattern: each leader-gated worker acquires its lease every tick (acquire-or-renew is idempotent). If acquired, do work; if not, skip. TTL must exceed worker interval so the lease survives between ticks. Let expire on death. Per-worker lease keys (e.g. `tasks-dispatcher`, `tasks-sweeper`). No refresher thread, no `is_holder`, no `refresh` — one `acquire` call per tick covers both leadership check and renewal.
 
 Leases accepted as SPOF (k8s analogy).
 

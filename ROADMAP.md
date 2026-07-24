@@ -22,7 +22,7 @@ Messaging service (own DB), RPC-style Protocol (publish, claim, ack, nack, sessi
 
 Depends on: Phases 2, 3.
 
-tasks public contract (`kind` on tasks, `task_kind` on schedules; `end_execution` by execution id), Dispatcher (begins executions, publishes to broker, one outstanding at a time) and Sweeper (leader-gated, each with own lease refresher thread), execution driving adapter (per-kind sessions, end on completion), rewired composition root.
+tasks public contract (`kind` on tasks, `task_kind` on schedules; `end_execution` by execution seq_num), Dispatcher (acquire-on-tick leader election, begins executions, publishes to broker, one outstanding at a time) and Sweeper (leader-gated, acquire-on-tick), execution driving adapter (per-kind sessions, end on completion), rewired composition root.
 
 Milestone: create-task-then-execute works through the new architecture.
 

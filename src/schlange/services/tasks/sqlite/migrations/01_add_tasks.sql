@@ -8,6 +8,7 @@ CREATE TABLE tasks (
     retry_policy TEXT NOT NULL,
     executions TEXT NOT NULL,
     last_execution_ended_at TEXT,
+    execution_in_progress INTEGER NOT NULL,
     schedule_id TEXT,
     kind TEXT NOT NULL
 );

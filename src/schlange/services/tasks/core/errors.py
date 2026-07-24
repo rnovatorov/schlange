@@ -28,3 +28,7 @@ class TaskNotFailedError(Error):
 
 class TaskExecutionNotFoundError(Error):
     pass
+
+
+class TaskExecutionNotEndedYetError(Error):
+    pass

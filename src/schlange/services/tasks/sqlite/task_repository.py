@@ -9,9 +9,10 @@ from .data_mapper import DataMapper
 
 SQL_CREATE_TASK = """
     INSERT INTO tasks (id, version, created_at, args, state, ready_at, retry_policy,
-        executions, last_execution_ended_at, schedule_id, kind)
+        executions, last_execution_ended_at, execution_in_progress, schedule_id, kind)
     VALUES (:id, :version, :created_at, :args, :state, :ready_at, :retry_policy,
-        :executions, :last_execution_ended_at, :schedule_id, :kind)
+        :executions, :last_execution_ended_at, :execution_in_progress,
+        :schedule_id, :kind)
 """
 
 SQL_GET_TASK_BY_ID = """
@@ -28,7 +29,9 @@ SQL_GET_TASKS_BY_SPEC = """
     WHERE
         coalesce(state = :state, true) AND
         coalesce(ready_at <= :ready_as_of, true) AND
-        coalesce(last_execution_ended_at <= :last_execution_ended_before, true)
+        coalesce(last_execution_ended_at <= :last_execution_ended_before, true) AND
+        coalesce(execution_in_progress = :execution_in_progress, true)
+    ORDER BY ready_at, id
 """
 
 SQL_DELETE_TASK_BY_ID = """
@@ -48,6 +51,7 @@ SQL_UPDATE_TASK_BY_ID = """
         retry_policy = :retry_policy,
         executions = :executions,
         last_execution_ended_at = :last_execution_ended_at,
+        execution_in_progress = :execution_in_progress,
         schedule_id = :schedule_id,
         kind = :kind
     WHERE id = :id AND version = :version
@@ -89,6 +93,12 @@ class TaskRepository:
                             and task.last_execution.ended_at is not None
                             else None
                         ),
+                        "execution_in_progress": (
+                            1
+                            if task.last_execution is not None
+                            and not task.last_execution.ended
+                            else 0
+                        ),
                         "schedule_id": task.schedule_id,
                         "kind": task.kind,
                     },
@@ -119,6 +129,11 @@ class TaskRepository:
                         spec.last_execution_ended_before.isoformat()
                         if spec.last_execution_ended_before is not None
                         else None
+                    ),
+                    "execution_in_progress": (
+                        1
+                        if spec.execution_in_progress is True
+                        else 0 if spec.execution_in_progress is False else None
                     ),
                 },
             )
@@ -171,6 +186,12 @@ class TaskRepository:
                         if task.last_execution is not None
                         and task.last_execution.ended_at is not None
                         else None
+                    ),
+                    "execution_in_progress": (
+                        1
+                        if task.last_execution is not None
+                        and not task.last_execution.ended
+                        else 0
                     ),
                     "schedule_id": task.schedule_id,
                     "kind": task.kind,

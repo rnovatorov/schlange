@@ -7,7 +7,7 @@ class DataMapper(sqlite.DataMapper):
 
     def dump_task_execution(self, execution: core.TaskExecution) -> internal_core.DTO:
         return {
-            "id": execution.id,
+            "seq_num": execution.seq_num,
             "begun_at": self.dump_timestamp(execution.begun_at),
             "ended_at": (
                 self.dump_timestamp(execution.ended_at)
@@ -19,7 +19,7 @@ class DataMapper(sqlite.DataMapper):
 
     def load_task_execution(self, dto: internal_core.DTO) -> core.TaskExecution:
         return core.TaskExecution(
-            id=dto["id"],
+            seq_num=dto["seq_num"],
             begun_at=self.load_timestamp(dto["begun_at"]),
             ended_at=(
                 self.load_timestamp(dto["ended_at"])

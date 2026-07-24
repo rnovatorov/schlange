@@ -58,6 +58,6 @@ class Server:
     def end_execution(self, request: tasks.EndExecutionRequest) -> None:
         self.service.end_execution(
             task_id=request.task_id,
-            execution_id=request.execution_id,
+            seq_num=request.seq_num,
             error=request.error,
         )

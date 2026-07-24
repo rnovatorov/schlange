@@ -12,6 +12,7 @@ class TaskSpecification:
     state: Optional[TaskState] = None
     ready_as_of: Optional[datetime.datetime] = None
     last_execution_ended_before: Optional[datetime.datetime] = None
+    execution_in_progress: Optional[bool] = None
 
     def is_satisfied_by(self, task: Task) -> bool:
         preconditions = [
@@ -23,6 +24,17 @@ class TaskSpecification:
                     task.last_execution is not None
                     and task.last_execution.ended_at is not None
                     and task.last_execution.ended_at < self.last_execution_ended_before
+                )
+            ),
+            (
+                self.execution_in_progress is None
+                or (
+                    self.execution_in_progress
+                    == (
+                        task.executions != []
+                        and task.last_execution is not None
+                        and not task.last_execution.ended
+                    )
                 )
             ),
         ]

@@ -5,6 +5,7 @@ from typing import List, Optional
 from schlange.internal import core as internal_core
 
 from .errors import (
+    TaskExecutionNotEndedYetError,
     TaskExecutionNotFoundError,
     TaskNotActiveError,
     TaskNotFailedError,
@@ -57,19 +58,23 @@ class Task(internal_core.Aggregate):
     def last_execution(self) -> Optional[TaskExecution]:
         return self.executions[-1] if self.executions else None
 
-    def begin_execution(self, now: datetime.datetime, execution_id: str) -> None:
+    def begin_execution(self, now: datetime.datetime) -> None:
         """Begins a new execution record. Task must be active and ready."""
         if self.state is not TaskState.ACTIVE:
             raise TaskNotActiveError()
         if not self.ready(now):
             raise TaskNotReadyError()
-        self.executions.append(TaskExecution.begin(id=execution_id, timestamp=now))
+        if self.last_execution is not None and not self.last_execution.ended:
+            raise TaskExecutionNotEndedYetError()
+        self.executions.append(
+            TaskExecution.begin(seq_num=len(self.executions), timestamp=now)
+        )
 
     def end_execution(
-        self, execution_id: str, now: datetime.datetime, error: Optional[str]
+        self, seq_num: int, now: datetime.datetime, error: Optional[str]
     ) -> None:
-        """Ends an execution by id. No-op if the execution has already ended."""
-        execution = self.get_execution(execution_id)
+        """Ends an execution by seq_num. No-op if the execution has already ended."""
+        execution = self.get_execution(seq_num)
         if execution.ended:
             return  # duplicate report from redelivery — no-op
         execution.end(timestamp=now, error=error)
@@ -82,9 +87,9 @@ class Task(internal_core.Aggregate):
         except internal_core.TooManyAttemptsError:
             self.state = TaskState.FAILED
 
-    def get_execution(self, execution_id: str) -> TaskExecution:
+    def get_execution(self, seq_num: int) -> TaskExecution:
         for execution in self.executions:
-            if execution.id == execution_id:
+            if execution.seq_num == seq_num:
                 return execution
         raise TaskExecutionNotFoundError()
 

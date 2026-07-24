@@ -3,7 +3,8 @@ import datetime
 import pathlib
 import tempfile
 import unittest
-import uuid
+from typing import List
+from unittest import mock
 
 from schlange.api import tasks as tasks_api
 from schlange.internal import sqlite
@@ -21,6 +22,15 @@ def _retry_policy():
     )
 
 
+class FakeMessageQueue:
+
+    def __init__(self) -> None:
+        self.published: List[tasks_core.TaskExecutionRequest] = []
+
+    def publish(self, request: tasks_core.TaskExecutionRequest) -> None:
+        self.published.append(request)
+
+
 class TaskServerTest(unittest.TestCase):
 
     def setUp(self):
@@ -30,14 +40,23 @@ class TaskServerTest(unittest.TestCase):
         self.db = self.db_ctx.__enter__()
         self.db.migrate(migrations_path=tasks_sqlite.MIGRATIONS_PATH)
         task_repository = tasks_sqlite.TaskRepository(self.db)
+        self.message_queue = FakeMessageQueue()
         self.task_service = tasks_core.TaskService(
             task_repository=task_repository,
+            message_queue=self.message_queue,
+            lease_service=mock.MagicMock(),
         )
         self.server = tasks_api_service.Server(service=self.task_service)
 
     def tearDown(self):
         self.db_ctx.__exit__(None, None, None)
         self.dir.cleanup()
+
+    def _dispatch_and_get_seq_num(self, task_id: str) -> int:
+        self.task_service.begin_execution(task_id)
+        task = self.task_service.task(task_id)
+        assert task.last_execution is not None
+        return task.last_execution.seq_num
 
     def test_create_task_returns_properly_typed_task(self):
         response = self.server.create_task(
@@ -112,12 +131,11 @@ class TaskServerTest(unittest.TestCase):
                 retry_policy=_retry_policy(),
             )
         )
-        begun = self.task_service.begin_execution(created.task.id)
-        execution_id = begun.last_execution.id
+        seq_num = self._dispatch_and_get_seq_num(created.task.id)
         self.server.end_execution(
             tasks_api.EndExecutionRequest(
                 task_id=created.task.id,
-                execution_id=execution_id,
+                seq_num=seq_num,
                 error=None,
             )
         )
@@ -133,13 +151,12 @@ class TaskServerTest(unittest.TestCase):
                 retry_policy=_retry_policy(),
             )
         )
-        begun = self.task_service.begin_execution(created.task.id)
-        execution_id = begun.last_execution.id
         before = self.task_service.task(created.task.id).ready_at
+        seq_num = self._dispatch_and_get_seq_num(created.task.id)
         self.server.end_execution(
             tasks_api.EndExecutionRequest(
                 task_id=created.task.id,
-                execution_id=execution_id,
+                seq_num=seq_num,
                 error="boom",
             )
         )
@@ -163,12 +180,11 @@ class TaskServerTest(unittest.TestCase):
             )
         )
         for _ in range(3):
-            begun = self.task_service.begin_execution(created.task.id)
-            execution_id = begun.last_execution.id
+            seq_num = self._dispatch_and_get_seq_num(created.task.id)
             self.server.end_execution(
                 tasks_api.EndExecutionRequest(
                     task_id=created.task.id,
-                    execution_id=execution_id,
+                    seq_num=seq_num,
                     error="boom",
                 )
             )
@@ -184,26 +200,25 @@ class TaskServerTest(unittest.TestCase):
                 retry_policy=_retry_policy(),
             )
         )
-        begun = self.task_service.begin_execution(created.task.id)
-        execution_id = begun.last_execution.id
+        seq_num = self._dispatch_and_get_seq_num(created.task.id)
         self.server.end_execution(
             tasks_api.EndExecutionRequest(
                 task_id=created.task.id,
-                execution_id=execution_id,
+                seq_num=seq_num,
                 error=None,
             )
         )
         self.server.end_execution(
             tasks_api.EndExecutionRequest(
                 task_id=created.task.id,
-                execution_id=execution_id,
+                seq_num=seq_num,
                 error="late",
             )
         )
         task = self.server.get_task(tasks_api.GetTaskRequest(id=created.task.id)).task
         self.assertEqual(task.state, tasks_api.TaskState.SUCCEEDED)
 
-    def test_end_execution_unknown_execution_id_raises(self):
+    def test_end_execution_unknown_seq_num_raises(self):
         created = self.server.create_task(
             tasks_api.CreateTaskRequest(
                 kind="test_kind",
@@ -216,7 +231,7 @@ class TaskServerTest(unittest.TestCase):
             self.server.end_execution(
                 tasks_api.EndExecutionRequest(
                     task_id=created.task.id,
-                    execution_id=str(uuid.uuid4()),
+                    seq_num=999,
                     error=None,
                 )
             )
@@ -249,12 +264,11 @@ class TaskServerTest(unittest.TestCase):
                 retry_policy=_retry_policy(),
             )
         )
-        begun = self.task_service.begin_execution(completed.task.id)
-        execution_id = begun.last_execution.id
+        seq_num = self._dispatch_and_get_seq_num(completed.task.id)
         self.server.end_execution(
             tasks_api.EndExecutionRequest(
                 task_id=completed.task.id,
-                execution_id=execution_id,
+                seq_num=seq_num,
                 error=None,
             )
         )
@@ -295,7 +309,7 @@ class TaskServerTest(unittest.TestCase):
         ids = {t.id for t in response.tasks}
         self.assertIn(completed.task.id, ids)
 
-    def test_begin_execution_on_succeeded_task_raises(self):
+    def test_begin_execution_on_succeeded_task_raises_not_active(self):
         created = self.server.create_task(
             tasks_api.CreateTaskRequest(
                 kind="test_kind",
@@ -304,12 +318,11 @@ class TaskServerTest(unittest.TestCase):
                 retry_policy=_retry_policy(),
             )
         )
-        begun = self.task_service.begin_execution(created.task.id)
-        execution_id = begun.last_execution.id
+        seq_num = self._dispatch_and_get_seq_num(created.task.id)
         self.server.end_execution(
             tasks_api.EndExecutionRequest(
                 task_id=created.task.id,
-                execution_id=execution_id,
+                seq_num=seq_num,
                 error=None,
             )
         )
@@ -338,7 +351,7 @@ class TaskServerTest(unittest.TestCase):
             self.server.end_execution(
                 tasks_api.EndExecutionRequest(
                     task_id=unknown_id,
-                    execution_id=str(uuid.uuid4()),
+                    seq_num=0,
                     error=None,
                 )
             )
@@ -359,12 +372,11 @@ class TaskServerTest(unittest.TestCase):
             )
         )
         for _ in range(3):
-            begun = self.task_service.begin_execution(created.task.id)
-            execution_id = begun.last_execution.id
+            seq_num = self._dispatch_and_get_seq_num(created.task.id)
             self.server.end_execution(
                 tasks_api.EndExecutionRequest(
                     task_id=created.task.id,
-                    execution_id=execution_id,
+                    seq_num=seq_num,
                     error="boom",
                 )
             )
