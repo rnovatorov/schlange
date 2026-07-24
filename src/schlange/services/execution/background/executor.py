@@ -9,12 +9,12 @@ from schlange.services.tasks import core
 LOGGER = logging.getLogger(__name__)
 
 
-class ExecutionWorker(background.Worker):
+class Executor(background.Worker):
 
     def __init__(
         self, interval: float, task_service: core.TaskService, threads: int
     ) -> None:
-        super().__init__(name="schlange.ExecutionWorker", interval=interval)
+        super().__init__(name="schlange.Executor", interval=interval)
         self.task_service = task_service
         self.lock = threading.Lock()
         self.executing_tasks: Set[str] = set()

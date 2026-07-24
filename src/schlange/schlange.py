@@ -6,7 +6,7 @@ import pathlib
 from typing import Generator, List, Optional
 
 from schlange.internal import core, sqlite
-from schlange.services.dispatch import background as dispatch_background
+from schlange.services.execution import background as execution_background
 from schlange.services.schedules import background as schedules_background
 from schlange.services.schedules import core as schedules_core
 from schlange.services.schedules import sqlite as schedules_sqlite
@@ -25,8 +25,8 @@ DEFAULT_RETRY_POLICY = tasks_core.RetryPolicy(
     max_attempts=20,
 )
 
-DEFAULT_EXECUTION_WORKER_INTERVAL = 1
-DEFAULT_EXECUTION_WORKER_THREADS = os.cpu_count() or 4
+DEFAULT_EXECUTOR_INTERVAL = 1
+DEFAULT_EXECUTOR_THREADS = os.cpu_count() or 4
 
 DEFAULT_CLEANUP_POLICY = tasks_core.CleanupPolicy(
     delete_succeeded_after=60 * 60 * 24,
@@ -43,7 +43,7 @@ class Schlange:
     task_service: tasks_core.TaskService
     default_retry_policy: tasks_core.RetryPolicy
     schedule_service: schedules_core.ScheduleService
-    execution_worker: dispatch_background.ExecutionWorker
+    executor: execution_background.Executor
     cleanup_worker: tasks_background.CleanupWorker
     schedule_worker: schedules_background.ScheduleWorker
 
@@ -55,13 +55,13 @@ class Schlange:
         self.stop()
 
     def start(self) -> None:
-        self.execution_worker.start()
+        self.executor.start()
         self.cleanup_worker.start()
         self.schedule_worker.start()
 
     def stop(self) -> None:
         self.cleanup_worker.stop()
-        self.execution_worker.stop()
+        self.executor.stop()
         self.schedule_worker.stop()
 
     @classmethod
@@ -72,14 +72,14 @@ class Schlange:
         schedule_database_path: pathlib.Path = DEFAULT_SCHEDULE_DATABASE_PATH,
         task_handler: Optional[tasks_core.TaskHandler] = None,
         default_retry_policy: tasks_core.RetryPolicy = DEFAULT_RETRY_POLICY,
-        execution_worker_interval: float = DEFAULT_EXECUTION_WORKER_INTERVAL,
-        execution_worker_threads: int = DEFAULT_EXECUTION_WORKER_THREADS,
+        executor_interval: float = DEFAULT_EXECUTOR_INTERVAL,
+        executor_threads: int = DEFAULT_EXECUTOR_THREADS,
         cleanup_policy: tasks_core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
     ) -> Generator["Schlange", None, None]:
         read_pool_capacity = calculate_optimal_database_read_pool_capacity(
-            execution_worker_threads
+            executor_threads
         )
         with sqlite.Database.open(
             path=task_database_path,
@@ -99,10 +99,10 @@ class Schlange:
                 schedule_repository=schedule_repository,
                 task_service=task_service,
             )
-            execution_worker = dispatch_background.ExecutionWorker(
-                interval=execution_worker_interval,
+            executor = execution_background.Executor(
+                interval=executor_interval,
                 task_service=task_service,
-                threads=execution_worker_threads,
+                threads=executor_threads,
             )
             cleanup_worker = tasks_background.CleanupWorker(
                 interval=cleanup_worker_interval,
@@ -117,7 +117,7 @@ class Schlange:
                 task_service=task_service,
                 default_retry_policy=default_retry_policy,
                 schedule_service=schedule_service,
-                execution_worker=execution_worker,
+                executor=executor,
                 cleanup_worker=cleanup_worker,
                 schedule_worker=schedule_worker,
             )
@@ -210,14 +210,14 @@ class Schlange:
 new = Schlange.new
 
 
-def calculate_optimal_database_read_pool_capacity(execution_worker_threads: int) -> int:
-    execution_worker = 1
+def calculate_optimal_database_read_pool_capacity(executor_threads: int) -> int:
+    executor = 1
     schedule_worker = 1
     cleanup_worker = 1
     additional_capacity = 1
     return (
-        execution_worker
-        + execution_worker_threads
+        executor
+        + executor_threads
         + cleanup_worker
         + schedule_worker
         + additional_capacity

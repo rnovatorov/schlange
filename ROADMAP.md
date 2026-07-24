@@ -22,7 +22,7 @@ Messaging service (own DB), RPC-style Protocol (publish, claim, ack, nack, sessi
 
 Depends on: Phases 2, 3.
 
-tasks public contract, generic lease worker, lease holder interface, refactored core (lease holder + outbox publish), outbox worker (lease-unaware), dispatch driving adapter (subscribe loop + driving port on dispatch core), rewired composition root.
+tasks public contract, generic lease worker, lease holder interface, refactored core (lease holder + outbox publish), outbox worker (lease-unaware), execution driving adapter (subscribe loop + driving port on execution core), rewired composition root.
 
 Milestone: create-task-then-execute works through the new architecture.
 

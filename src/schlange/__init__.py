@@ -2,7 +2,7 @@ import logging
 
 from schlange.internal import core
 from schlange.schlange import (
-    DEFAULT_EXECUTION_WORKER_THREADS,
+    DEFAULT_EXECUTOR_THREADS,
     DEFAULT_RETRY_POLICY,
     DEFAULT_SCHEDULE_DATABASE_PATH,
     DEFAULT_TASK_DATABASE_PATH,
@@ -26,7 +26,7 @@ logging.getLogger(__name__).handlers = [logging.NullHandler()]
 
 __all__ = [
     "CleanupPolicy",
-    "DEFAULT_EXECUTION_WORKER_THREADS",
+    "DEFAULT_EXECUTOR_THREADS",
     "DEFAULT_RETRY_POLICY",
     "DEFAULT_SCHEDULE_DATABASE_PATH",
     "DEFAULT_TASK_DATABASE_PATH",

@@ -5,7 +5,7 @@ Decisions, not rationale. Build order is in [ROADMAP.md](ROADMAP.md).
 ## Services
 
 - **tasks** — task lifecycle, owns outbox publisher. Leader-elected.
-- **dispatch** — consumes from broker, executes, reports back. Scales horizontally.
+- **execution** — consumes from broker, executes, reports back. Scales horizontally.
 - **schedules** — fires schedules by creating tasks. Leader-elected.
 - **messaging** — durable queue, session-based consumer death detection, periodic sweeper. Built-in; replaceable by external broker.
 - **leases** — leader election primitive.
@@ -51,9 +51,9 @@ At-least-once everywhere. Handlers must be idempotent. No fencing tokens. No dis
 
 RPC-style Protocol (7 RPCs): publish, claim, ack, nack, create_session, heartbeat, close_session. Request/response dataclasses, no callbacks or context managers. Direct exchange: messages carry `routing_key` (publisher-set), sessions carry `queue` (consumer subscription). Broker matches them. Competing consumers: atomic claim via `UPDATE...JOIN...RETURNING`. Dead-letter is a boolean flag on messages, not a routing key change. Nack sets flag, releases claim. No backoff or retry limit in broker — consumer-side concern.
 
-Push-based delivery (subscribe with handler) is NOT on the Protocol. Consumer-side driving adapter (Phase 4) orchestrates RPCs into a delivery loop. Consuming service core defines a driving port; adapter bridges.
+Push-based delivery (subscribe with handler) is NOT on the Protocol. Consumer-side driving adapter (Phase 4) orchestrates RPCs into a delivery loop. Consuming service core defines a driving port; execution adapter bridges.
 
-Protocol is internal to our SQLite broker. External brokers implement the consuming service's port, not this Protocol. The port is the seam for "bring your own broker."
+Protocol is internal to our SQLite broker. External brokers implement the executing service's port, not this Protocol. The port is the seam for "bring your own broker."
 
 Consumer death via session heartbeats + periodic sweeper. Publish uses `synchronous=FULL` (durable — outbox cannot protect cross-DB). Consume (claim, ack, nack) uses `synchronous=NORMAL` (at-least-once redelivery is the contract).
 

@@ -22,7 +22,7 @@ class BenchCommand(Command):
             "-w",
             "--workers",
             type=int,
-            default=schlange.DEFAULT_EXECUTION_WORKER_THREADS,
+            default=schlange.DEFAULT_EXECUTOR_THREADS,
             help="number of concurrent execution workers",
         )
 
@@ -43,7 +43,7 @@ class BenchCommand(Command):
             task_database_path=args.task_database_path,
             schedule_database_path=args.schedule_database_path,
             task_handler=handle_task,
-            execution_worker_threads=args.workers,
+            executor_threads=args.workers,
         ) as sch:
             started_creating_tasks_at = time.time()
             for i in range(args.tasks):
