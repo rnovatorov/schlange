@@ -92,7 +92,7 @@ class Schlange:
             schedule_db.migrate(migrations_path=schedules_sqlite.MIGRATIONS_PATH)
             task_repository = tasks_sqlite.TaskRepository(db=task_db)
             task_service = tasks_core.TaskService(
-                task_repository=task_repository, task_handler=task_handler
+                task_repository=task_repository,
             )
             schedule_repository = schedules_sqlite.ScheduleRepository(db=schedule_db)
             schedule_service = schedules_core.ScheduleService(

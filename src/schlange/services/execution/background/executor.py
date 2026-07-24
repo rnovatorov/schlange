@@ -63,14 +63,8 @@ class Executor(background.Worker):
                 task.last_execution.duration,
                 task.last_execution.error,
             )
-        except (
-            IOError,
-            core.TaskExecutionNotEndedYetError,
-            core.TaskExecutionNotBegunYetError,
-        ) as err:
+        except IOError as err:
             LOGGER.error("failed to execute task: id=%s, err=%r", task.id, err)
-        except core.TaskHandlerNotFound as err:
-            LOGGER.warning("failed to execute task: id=%s, err=%r", task.id, err)
         except (
             core.TaskNotFoundError,
             core.TaskNotActiveError,

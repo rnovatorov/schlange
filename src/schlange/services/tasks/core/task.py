@@ -5,8 +5,7 @@ from typing import List, Optional
 from schlange.internal import core as internal_core
 
 from .errors import (
-    TaskExecutionNotBegunYetError,
-    TaskExecutionNotEndedYetError,
+    TaskExecutionNotFoundError,
     TaskNotActiveError,
     TaskNotFailedError,
     TaskNotReadyError,
@@ -58,19 +57,22 @@ class Task(internal_core.Aggregate):
     def last_execution(self) -> Optional[TaskExecution]:
         return self.executions[-1] if self.executions else None
 
-    def begin_execution(self, now: datetime.datetime) -> None:
+    def begin_execution(self, now: datetime.datetime, execution_id: str) -> None:
+        """Begins a new execution record. Task must be active and ready."""
         if self.state is not TaskState.ACTIVE:
             raise TaskNotActiveError()
         if not self.ready(now):
             raise TaskNotReadyError()
-        if self.last_execution is not None and not self.last_execution.ended:
-            raise TaskExecutionNotEndedYetError()
-        self.executions.append(TaskExecution.begin(timestamp=now))
+        self.executions.append(TaskExecution.begin(id=execution_id, timestamp=now))
 
-    def end_execution(self, now: datetime.datetime, error: Optional[str]) -> None:
-        if self.last_execution is None or self.last_execution.ended:
-            raise TaskExecutionNotBegunYetError()
-        self.last_execution.end(timestamp=now, error=error)
+    def end_execution(
+        self, execution_id: str, now: datetime.datetime, error: Optional[str]
+    ) -> None:
+        """Ends an execution by id. No-op if the execution has already ended."""
+        execution = self.get_execution(execution_id)
+        if execution.ended:
+            return  # duplicate report from redelivery — no-op
+        execution.end(timestamp=now, error=error)
         if error is None:
             self.state = TaskState.SUCCEEDED
             return
@@ -79,6 +81,12 @@ class Task(internal_core.Aggregate):
             self.ready_at = now + datetime.timedelta(seconds=delay)
         except internal_core.TooManyAttemptsError:
             self.state = TaskState.FAILED
+
+    def get_execution(self, execution_id: str) -> TaskExecution:
+        for execution in self.executions:
+            if execution.id == execution_id:
+                return execution
+        raise TaskExecutionNotFoundError()
 
     def reactivate(self, now: datetime.datetime, delay: float) -> None:
         if self.state != TaskState.FAILED:

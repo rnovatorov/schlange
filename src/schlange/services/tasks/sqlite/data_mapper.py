@@ -7,24 +7,26 @@ class DataMapper(sqlite.DataMapper):
 
     def dump_task_execution(self, execution: core.TaskExecution) -> internal_core.DTO:
         return {
+            "id": execution.id,
             "begun_at": self.dump_timestamp(execution.begun_at),
             "ended_at": (
                 self.dump_timestamp(execution.ended_at)
                 if execution.ended_at is not None
                 else None
             ),
-            "error": execution.error if execution.error is not None else None,
+            "error": execution.error,
         }
 
     def load_task_execution(self, dto: internal_core.DTO) -> core.TaskExecution:
         return core.TaskExecution(
+            id=dto["id"],
             begun_at=self.load_timestamp(dto["begun_at"]),
             ended_at=(
                 self.load_timestamp(dto["ended_at"])
                 if dto.get("ended_at") is not None
                 else None
             ),
-            error=dto["error"] if dto.get("error") is not None else None,
+            error=dto["error"],
         )
 
     def load_task_state(self, s: str) -> core.TaskState:

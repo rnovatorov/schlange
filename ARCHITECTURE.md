@@ -45,7 +45,7 @@ Threads-die-process-dies. `threading.excepthook` logs the traceback, then calls 
 
 ## Reliability
 
-At-least-once everywhere. Handlers must be idempotent. No fencing tokens. No distributed transactions; the task row is the outbox — the Dispatcher publishes executable tasks (`state=ACTIVE AND ready_at <= now AND dispatched_at IS NULL`) to the broker and sets `dispatched_at`. No separate outbox table; single row, single transaction, no orphans.
+At-least-once everywhere. Handlers must be idempotent. No fencing tokens. No distributed transactions. The Dispatcher begins an execution, publishes to the broker (publish-before-commit), and waits for `end_execution` before beginning the next — one outstanding execution per task. `end_execution` is idempotent by execution id; duplicate calls from redelivery are no-ops. No leases or timeouts — broker session-death detection drives redelivery, which recovers crashed executors.
 
 ## Broker
 

@@ -1,15 +1,12 @@
 import dataclasses
 import datetime
-import traceback
 import uuid
 from typing import List, Optional
 
 from schlange.internal import core as internal_core
 
 from .cleanup_policy import CleanupPolicy
-from .errors import TaskHandlerNotFound
 from .task import Task
-from .task_handler import TaskHandler
 from .task_repository import TaskRepository
 from .task_specification import TaskSpecification
 from .task_state import TaskState
@@ -19,7 +16,6 @@ from .task_state import TaskState
 class TaskService:
 
     task_repository: TaskRepository
-    task_handler: Optional[TaskHandler]
 
     def create_task(
         self,
@@ -83,15 +79,6 @@ class TaskService:
         """
         self.task_repository.delete_task(task_id)
 
-    def executable_tasks(self) -> List[Task]:
-        """
-        Raises:
-            IOError: IO error occurred during the operation.
-        """
-        return self.list_tasks(
-            TaskSpecification(state=TaskState.ACTIVE, ready_as_of=self._now()),
-        )
-
     def list_tasks(self, spec: TaskSpecification) -> List[Task]:
         """
         Raises:
@@ -99,32 +86,41 @@ class TaskService:
         """
         return self.task_repository.list_tasks(spec)
 
-    def execute_task(self, task_id: str) -> Task:
-        """
-        The update is not durable. If a crash occurs after the handler
-        runs but before the write is persisted, crash recovery will
-        re-execute the task. This trades durability for throughput.
+    def begin_execution(self, task_id: str) -> Task:
+        """Creates a begun execution record.
 
         Raises:
             IOError: IO error occurred during the operation.
             TaskNotActiveError: Task is not in active state.
             TaskNotReadyError: Task is not ready yet.
             TaskNotFoundError: Task was not found.
-            TaskHandlerNotFound: Task handler was not found.
             TaskUpdatedConcurrentlyError: Task was updated by another transaction.
         """
         task = self.task_repository.get_task(task_id)
-        if self.task_handler is None:
-            raise TaskHandlerNotFound()
-        task.begin_execution(now=self._now())
-        error: Optional[str] = None
-        try:
-            self.task_handler(task)
-        except Exception:
-            error = traceback.format_exc()
-        task.end_execution(now=self._now(), error=error)
+        task.begin_execution(now=self._now(), execution_id=str(uuid.uuid4()))
         self.task_repository.update_task(task, synchronous=False)
         return task
+
+    def end_execution(
+        self, task_id: str, execution_id: str, error: Optional[str]
+    ) -> Task:
+        """
+        Raises:
+            IOError: IO error occurred during the operation.
+            TaskNotFoundError: Task was not found.
+            TaskExecutionNotFoundError: Execution was not found.
+            TaskUpdatedConcurrentlyError: Task was updated by another transaction.
+        """
+        task = self.task_repository.get_task(task_id)
+        task.end_execution(execution_id=execution_id, now=self._now(), error=error)
+        self.task_repository.update_task(task, synchronous=True)
+        return task
+
+    def executable_tasks(self) -> List[Task]:
+        raise NotImplementedError("Executor rewrite pending")
+
+    def execute_task(self, task_id: str) -> Task:
+        raise NotImplementedError("Executor rewrite pending")
 
     def reactivate_task(self, task_id: str, delay: float) -> Task:
         """
