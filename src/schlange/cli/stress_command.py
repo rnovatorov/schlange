@@ -79,7 +79,9 @@ class StressCommand(Command):
             executor_threads=args.workers,
         ) as sch:
             for i in range(args.schedules):
-                sch.create_schedule(task_args={}, interval=args.interval)
+                sch.create_schedule(
+                    task_args={}, task_kind="stress", interval=args.interval
+                )
 
             started_at = time.time()
             with sch:

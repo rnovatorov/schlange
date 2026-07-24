@@ -27,6 +27,12 @@ class TaskCreateCommand(Command):
             "--delay", type=float, default=0, help="delay before initial start"
         )
         task_create_parser.add_argument(
+            "--kind",
+            type=str,
+            default="default",
+            help="kind of the task",
+        )
+        task_create_parser.add_argument(
             "--retry-policy-initial-delay",
             type=float,
             default=schlange.DEFAULT_RETRY_POLICY.initial_delay,
@@ -67,7 +73,10 @@ class TaskCreateCommand(Command):
                     max_attempts=args.retry_policy_max_attempts,
                 )
                 task = sch.create_task(
-                    task_args, delay=args.delay, retry_policy=retry_policy
+                    task_args,
+                    kind=args.kind,
+                    delay=args.delay,
+                    retry_policy=retry_policy,
                 )
                 dto = data_mapper.dump_task(task)
                 print(json.dumps(dto, indent=4))

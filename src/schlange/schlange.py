@@ -125,6 +125,7 @@ class Schlange:
     def create_task(
         self,
         args: core.DTO,
+        kind: str,
         delay: float = 0.0,
         retry_policy: Optional[tasks_core.RetryPolicy] = None,
         id: Optional[str] = None,
@@ -139,6 +140,7 @@ class Schlange:
         )
         task = self.task_service.create_task(
             args=args,
+            kind=kind,
             delay=delay,
             retry_policy=retry_policy,
             id=id,
@@ -164,6 +166,7 @@ class Schlange:
     def create_schedule(
         self,
         task_args: core.DTO,
+        task_kind: str,
         interval: float,
         enabled: bool = True,
         delay: float = 0.0,
@@ -187,6 +190,7 @@ class Schlange:
             retry_policy=retry_policy,
             enabled=enabled,
             task_args=task_args,
+            task_kind=task_kind,
             task_retry_policy=task_retry_policy,
             id=id,
         )

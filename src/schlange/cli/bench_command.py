@@ -47,7 +47,7 @@ class BenchCommand(Command):
         ) as sch:
             started_creating_tasks_at = time.time()
             for i in range(args.tasks):
-                sch.create_task(args={}, delay=0)
+                sch.create_task(args={}, kind="bench", delay=0)
             finished_creating_tasks_at = time.time()
             creating_tasks_took = finished_creating_tasks_at - started_creating_tasks_at
 

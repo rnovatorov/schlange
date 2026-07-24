@@ -20,6 +20,7 @@ class Task(internal_core.Aggregate):
 
     created_at: datetime.datetime
     state: TaskState
+    kind: str
     args: internal_core.DTO
     ready_at: datetime.datetime
     retry_policy: internal_core.RetryPolicy
@@ -31,6 +32,7 @@ class Task(internal_core.Aggregate):
         cls,
         now: datetime.datetime,
         id: str,
+        kind: str,
         args: internal_core.DTO,
         delay: float,
         retry_policy: internal_core.RetryPolicy,
@@ -41,6 +43,7 @@ class Task(internal_core.Aggregate):
             version=1,
             created_at=now,
             state=TaskState.ACTIVE,
+            kind=kind,
             args=args,
             ready_at=now + datetime.timedelta(seconds=delay),
             retry_policy=retry_policy,

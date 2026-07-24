@@ -4,7 +4,7 @@ Decisions, not rationale. Build order is in [ROADMAP.md](ROADMAP.md).
 
 ## Services
 
-- **tasks** — task lifecycle, owns outbox publisher. Leader-elected.
+- **tasks** — task lifecycle, owns Dispatcher (publishes executable tasks to broker). Tasks carry a `kind` for routing. Leader-elected.
 - **execution** — consumes from broker, executes, reports back. Scales horizontally.
 - **schedules** — fires schedules by creating tasks. Leader-elected.
 - **messaging** — durable queue, session-based consumer death detection, periodic sweeper. Built-in; replaceable by external broker.
@@ -27,7 +27,7 @@ src/schlange/
 │   ├── sqlite/          # persistence (private to service)
 │   └── background/      # workers (private to service)
 ├── internal/
-│   ├── background/      # Worker base, generic LeaseWorker, LeaseHolder protocol
+│   ├── background/      # Worker base
 │   ├── core/            # shared primitives (Aggregate, DTO, RetryPolicy, TooManyAttemptsError)
 │   └── sqlite/          # shared SQLite plumbing (connection, transaction, DataMapper base)
 └── cli/
@@ -45,7 +45,7 @@ Threads-die-process-dies. `threading.excepthook` logs the traceback, then calls 
 
 ## Reliability
 
-At-least-once everywhere. Handlers must be idempotent. No fencing tokens. No distributed transactions; the outbox pattern prevents orphans (tasks writes task row + outbox row in one transaction; a worker publishes outbox rows to the broker and marks them sent).
+At-least-once everywhere. Handlers must be idempotent. No fencing tokens. No distributed transactions; the task row is the outbox — the Dispatcher publishes executable tasks (`state=ACTIVE AND ready_at <= now AND dispatched_at IS NULL`) to the broker and sets `dispatched_at`. No separate outbox table; single row, single transaction, no orphans.
 
 ## Broker
 
@@ -61,7 +61,7 @@ Consumer death via session heartbeats + periodic sweeper. Publish uses `synchron
 
 Etcd-compatible API: `acquire(key, holder, ttl)`, `refresh(key, holder)`, `release(key, holder)`, `is_holder(key, holder)`. Implementable on SQLite, etcd, Redis.
 
-Lease holder pattern: generic background worker drives a lease via a 3-method interface (acquire/renew/release). Services needing election implement this on their core (delegating to leases). Work drivers are lease-unaware — they call a work method on the core; the core no-ops (returns early) if not leader.
+Lease holder pattern: each leader-gated worker owns its lease key and spawns a refresher thread (acquire on start, refresh every tick, let expire on death). The worker's business logic checks `is_holder(key, holder)` each tick and no-ops if not leader. Per-worker lease keys (e.g. `tasks-dispatcher`, `tasks-sweeper`). No generic abstraction — concrete per service.
 
 Leases accepted as SPOF (k8s analogy).
 

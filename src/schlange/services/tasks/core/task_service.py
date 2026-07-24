@@ -24,6 +24,7 @@ class TaskService:
     def create_task(
         self,
         args: internal_core.DTO,
+        kind: str,
         delay: float,
         retry_policy: internal_core.RetryPolicy,
         id: Optional[str] = None,
@@ -38,6 +39,7 @@ class TaskService:
         task = Task.create(
             now=self._now(),
             id=id,
+            kind=kind,
             args=args,
             delay=delay,
             retry_policy=retry_policy,

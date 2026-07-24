@@ -8,7 +8,8 @@ CREATE TABLE tasks (
     retry_policy TEXT NOT NULL,
     executions TEXT NOT NULL,
     last_execution_ended_at TEXT,
-    schedule_id TEXT
+    schedule_id TEXT,
+    kind TEXT NOT NULL
 );
 
 CREATE UNIQUE INDEX idx_schedule_id_where_active ON tasks (schedule_id)

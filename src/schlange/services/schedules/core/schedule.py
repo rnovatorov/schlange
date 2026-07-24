@@ -25,6 +25,7 @@ class Schedule(internal_core.Aggregate):
     retry_policy: tasks_core.RetryPolicy
     enabled: bool
     task_args: internal_core.DTO
+    task_kind: str
     task_retry_policy: tasks_core.RetryPolicy
     task_sequence_number: int
     firings: List[ScheduleFiring]
@@ -39,6 +40,7 @@ class Schedule(internal_core.Aggregate):
         retry_policy: tasks_core.RetryPolicy,
         enabled: bool,
         task_args: internal_core.DTO,
+        task_kind: str,
         task_retry_policy: tasks_core.RetryPolicy,
     ) -> "Schedule":
         origin = now + datetime.timedelta(seconds=delay)
@@ -52,6 +54,7 @@ class Schedule(internal_core.Aggregate):
             retry_policy=retry_policy,
             enabled=enabled,
             task_args=task_args,
+            task_kind=task_kind,
             task_retry_policy=task_retry_policy,
             task_sequence_number=1,
             firings=[],

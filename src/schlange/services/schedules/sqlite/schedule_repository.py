@@ -10,21 +10,22 @@ from .data_mapper import DataMapper
 SQL_CREATE_SCHEDULE = """
     INSERT
     INTO schedules (id, version, created_at, ready_at, origin, interval, retry_policy,
-        enabled, task_args, task_retry_policy, task_sequence_number, firings)
+        enabled, task_args, task_retry_policy, task_sequence_number, firings, task_kind)
     VALUES (:id, :version, :created_at, :ready_at, :origin, :interval, :retry_policy,
-        :enabled, :task_args, :task_retry_policy, :task_sequence_number, :firings)
+        :enabled, :task_args, :task_retry_policy, :task_sequence_number, :firings,
+        :task_kind)
 """
 
 SQL_GET_SCHEDULE_BY_ID = """
     SELECT id, version, created_at, ready_at, origin, interval, retry_policy,
-        enabled, task_args, task_retry_policy, task_sequence_number, firings
+        enabled, task_args, task_retry_policy, task_sequence_number, firings, task_kind
     FROM schedules
     WHERE id = :id
 """
 
 SQL_GET_SCHEDULES_BY_SPEC = """
     SELECT id, version, created_at, ready_at, origin, interval, retry_policy,
-        enabled, task_args, task_retry_policy, task_sequence_number, firings
+        enabled, task_args, task_retry_policy, task_sequence_number, firings, task_kind
     FROM schedules
     WHERE
         coalesce(enabled = :enabled, true) AND
@@ -50,7 +51,8 @@ SQL_UPDATE_SCHEDULE_BY_ID = """
         task_args = :task_args,
         task_retry_policy = :task_retry_policy,
         task_sequence_number = :task_sequence_number,
-        firings = :firings
+        firings = :firings,
+        task_kind = :task_kind
     WHERE id = :id AND version = :version
 """
 
@@ -92,6 +94,7 @@ class ScheduleRepository:
                                 for firing in schedule.firings
                             ]
                         ),
+                        "task_kind": schedule.task_kind,
                     },
                 )
             except sqlite3.IntegrityError:
@@ -137,6 +140,7 @@ class ScheduleRepository:
                 self.data_mapper.load_schedule_firing(dto)
                 for dto in json.loads(row[11])
             ],
+            task_kind=row[12],
         )
 
     def delete_schedule(self, schedule_id: str) -> None:
@@ -171,6 +175,7 @@ class ScheduleRepository:
                             for firing in schedule.firings
                         ]
                     ),
+                    "task_kind": schedule.task_kind,
                 },
             )
             if not rows_affected:

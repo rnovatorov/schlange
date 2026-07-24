@@ -34,6 +34,7 @@ class ScheduleRepositoryTest(unittest.TestCase):
             ),
             enabled=True,
             task_args={"key": "value"},
+            task_kind="test",
             task_retry_policy=tasks_core.RetryPolicy(
                 initial_delay=1, backoff_factor=2, max_delay=None, max_attempts=1
             ),

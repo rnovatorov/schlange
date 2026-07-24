@@ -9,21 +9,21 @@ from .data_mapper import DataMapper
 
 SQL_CREATE_TASK = """
     INSERT INTO tasks (id, version, created_at, args, state, ready_at, retry_policy,
-        executions, last_execution_ended_at, schedule_id)
+        executions, last_execution_ended_at, schedule_id, kind)
     VALUES (:id, :version, :created_at, :args, :state, :ready_at, :retry_policy,
-        :executions, :last_execution_ended_at, :schedule_id)
+        :executions, :last_execution_ended_at, :schedule_id, :kind)
 """
 
 SQL_GET_TASK_BY_ID = """
     SELECT id, version, created_at, args, state, ready_at, retry_policy, executions,
-        schedule_id
+        schedule_id, kind
     FROM tasks
     WHERE id = :id
 """
 
 SQL_GET_TASKS_BY_SPEC = """
     SELECT id, version, created_at, args, state, ready_at, retry_policy, executions,
-        schedule_id
+        schedule_id, kind
     FROM tasks
     WHERE
         coalesce(state = :state, true) AND
@@ -48,7 +48,8 @@ SQL_UPDATE_TASK_BY_ID = """
         retry_policy = :retry_policy,
         executions = :executions,
         last_execution_ended_at = :last_execution_ended_at,
-        schedule_id = :schedule_id
+        schedule_id = :schedule_id,
+        kind = :kind
     WHERE id = :id AND version = :version
 """
 
@@ -89,6 +90,7 @@ class TaskRepository:
                             else None
                         ),
                         "schedule_id": task.schedule_id,
+                        "kind": task.kind,
                     },
                 )
             except sqlite3.IntegrityError:
@@ -135,6 +137,7 @@ class TaskRepository:
                 self.data_mapper.load_task_execution(dto) for dto in json.loads(row[7])
             ],
             schedule_id=row[8],
+            kind=row[9],
         )
 
     def delete_task(self, task_id: str) -> None:
@@ -170,6 +173,7 @@ class TaskRepository:
                         else None
                     ),
                     "schedule_id": task.schedule_id,
+                    "kind": task.kind,
                 },
             )
             if not rows_affected:

@@ -25,6 +25,7 @@ class ScheduleService:
         retry_policy: tasks_core.RetryPolicy,
         enabled: bool,
         task_args: internal_core.DTO,
+        task_kind: str,
         task_retry_policy: tasks_core.RetryPolicy,
         id: Optional[str] = None,
     ) -> Schedule:
@@ -38,6 +39,7 @@ class ScheduleService:
             retry_policy=retry_policy,
             enabled=enabled,
             task_args=task_args,
+            task_kind=task_kind,
             task_retry_policy=task_retry_policy,
         )
         self.schedule_repository.create_schedule(schedule)
@@ -62,6 +64,7 @@ class ScheduleService:
             _ = self.task_service.create_task(
                 id=schedule.generate_task_id(),
                 args=schedule.task_args,
+                kind=schedule.task_kind,
                 delay=0,
                 retry_policy=schedule.task_retry_policy,
                 schedule_id=schedule_id,
