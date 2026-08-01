@@ -117,7 +117,7 @@ class Store:
         created_at: datetime.datetime,
     ) -> None:
         epoch = self.dm.dump_timestamp(created_at)
-        with self.db.transaction(synchronous=False) as tx:
+        with self.db.transaction() as tx:
             try:
                 tx.execute(
                     SQL_PUBLISH,

@@ -124,12 +124,15 @@ class Schlange:
         dispatcher_lease_ttl: float = DEFAULT_DISPATCHER_LEASE_TTL,
         lease_reaper_interval: float = DEFAULT_LEASE_REAPER_INTERVAL,
     ) -> Generator["Schlange", None, None]:
+        write_pool_capacity = consumers_per_kind * len(handlers)
         read_pool_capacity = calculate_optimal_database_read_pool_capacity(
             consumers_per_kind, len(handlers)
         )
         with sqlite.Database.open(
             path=task_database_path,
             read_pool_capacity=read_pool_capacity,
+            write_pool_capacity=write_pool_capacity,
+            sync_write_pool_capacity=write_pool_capacity,
         ) as task_db, sqlite.Database.open(
             path=schedule_database_path,
             read_pool_capacity=read_pool_capacity,
@@ -139,6 +142,8 @@ class Schlange:
         ) as lease_db, sqlite.Database.open(
             path=messaging_database_path,
             read_pool_capacity=read_pool_capacity,
+            write_pool_capacity=write_pool_capacity,
+            sync_write_pool_capacity=write_pool_capacity,
         ) as messaging_db:
             task_db.migrate(migrations_path=tasks_sqlite.MIGRATIONS_PATH)
             schedule_db.migrate(migrations_path=schedules_sqlite.MIGRATIONS_PATH)
