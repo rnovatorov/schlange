@@ -7,13 +7,14 @@ import time
 import uuid
 
 from schlange.internal import sqlite
+from schlange.services.messaging import core
 from schlange.services.messaging.sqlite import constants
 from schlange.services.messaging.sqlite.store import Store
 
 from .command import Command
 from .subparsers import Subparsers
 
-ROUTING_KEY = "bench"
+QUEUE = "bench"
 
 
 class BenchMessagingCommand(Command):
@@ -45,6 +46,12 @@ class BenchMessagingCommand(Command):
             help="payload size in bytes",
         )
         parser.add_argument(
+            "--visibility-timeout",
+            type=float,
+            default=300.0,
+            help="visibility timeout in seconds",
+        )
+        parser.add_argument(
             "--db-path",
             type=pathlib.Path,
             default=None,
@@ -60,6 +67,10 @@ class BenchMessagingCommand(Command):
             ) as db:
                 db.migrate(migrations_path=constants.MIGRATIONS_PATH)
                 store = Store(db)
+                store.declare_queue(
+                    QUEUE, None, args.visibility_timeout,
+                    datetime.datetime.now(datetime.UTC),
+                )
                 pub_time = _publish(store, args.messages, args.payload_size)
                 results, con_time = _consume(store, args.consumers)
                 _report(args.messages, pub_time, results, con_time, args.consumers)
@@ -71,16 +82,24 @@ def _publish(store: Store, count: int, payload_size: int) -> float:
     payload = b"x" * payload_size
     t0 = time.time()
     for _ in range(count):
-        store.publish(
-            str(uuid.uuid4()), ROUTING_KEY, payload, datetime.datetime.now(datetime.UTC)
+        store.publish_message(
+            str(uuid.uuid4()),
+            QUEUE,
+            payload,
+            datetime.datetime.now(datetime.UTC),
         )
     return time.time() - t0
 
 
-def _consume(store: Store, num_workers: int) -> tuple[dict[int, int], float]:
+def _consume(
+    store: Store, num_workers: int
+) -> tuple[dict[int, int], float]:
     results: dict[int, int] = {}
     threads = [
-        threading.Thread(target=_consume_worker, args=(store, i, results))
+        threading.Thread(
+            target=_consume_worker,
+            args=(store, i, results),
+        )
         for i in range(num_workers)
     ]
     t0 = time.time()
@@ -91,19 +110,22 @@ def _consume(store: Store, num_workers: int) -> tuple[dict[int, int], float]:
     return results, time.time() - t0
 
 
-def _consume_worker(store: Store, worker_id: int, results: dict[int, int]) -> None:
-    session_id = str(uuid.uuid4())
-    store.create_session(
-        session_id, ROUTING_KEY, False, datetime.datetime.now(datetime.UTC)
-    )
+def _consume_worker(
+    store: Store,
+    worker_id: int,
+    results: dict[int, int],
+) -> None:
     count = 0
     while True:
-        msg = store.claim(session_id, datetime.datetime.now(datetime.UTC))
-        if msg is None:
+        try:
+            msg = store.claim_message(
+                QUEUE,
+                datetime.datetime.now(datetime.UTC),
+            )
+        except core.NoMessagesAvailable:
             break
         count += 1
-        store.ack(msg.id)
-    store.close_session(session_id)
+        store.delete_message(msg.id, msg.version)
     results[worker_id] = count
 
 

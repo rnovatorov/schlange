@@ -1,85 +1,57 @@
 import datetime
-from typing import List, Optional
+import sqlite3
 
 from schlange.internal import sqlite
 from schlange.services.messaging import core
 
-SQL_PUBLISH = """
-    INSERT INTO messages (id, routing_key, payload, created_at, is_dead_letter)
-    VALUES (:id, :routing_key, :payload, :created_at, :is_dead_letter)
+SQL_INSERT_QUEUE = """
+    INSERT INTO queues (name, dead_letter_queue, visibility_timeout, created_at)
+    VALUES (:name, :dead_letter_queue, :visibility_timeout, :created_at)
 """
 
-# Atomic claim: pick the oldest unclaimed message whose routing_key and
-# dead-letter flag match the session's queue and dead-letter flag, and
-# assign it to the session. RETURNING yields the claimed message; no
-# row means nothing matched or the session does not exist.
+SQL_FIND_QUEUE = """
+    SELECT name, dead_letter_queue, visibility_timeout, created_at
+    FROM queues
+    WHERE name = :name
+"""
+
+SQL_PUBLISH = """
+    INSERT INTO messages (id, queue, payload, created_at, visible_at, version)
+    VALUES (:id, :queue, :payload, :created_at, :visible_at, :version)
+"""
+
 SQL_CLAIM = """
     UPDATE messages
-    SET claimed_by = :session_id, claimed_at = :now
+    SET version = version + 1,
+        visible_at = :now + (
+            SELECT visibility_timeout FROM queues WHERE name = :queue
+        )
     WHERE id = (
-        SELECT m.id
-        FROM messages m
-        JOIN sessions s
-            ON m.routing_key = s.queue AND m.is_dead_letter = s.dead_letter
-        WHERE s.id = :session_id AND m.claimed_by IS NULL
-        ORDER BY m.created_at
+        SELECT id
+        FROM messages
+        WHERE queue = :queue AND visible_at <= :now
+        ORDER BY created_at
         LIMIT 1
     )
-    RETURNING id, routing_key, payload, created_at, is_dead_letter, claimed_by, claimed_at
+    RETURNING id, queue, payload, created_at, version
 """
 
-SQL_ACK = """
+SQL_DELETE_MESSAGE = """
     DELETE FROM messages
-    WHERE id = :message_id
+    WHERE id = :message_id AND version = :version
 """
 
-# Nack: route to the dead-letter queue (idempotent by nature) and
-# release the claim so a dead-letter session can re-claim it.
-SQL_NACK = """
+SQL_MOVE_TO_DLQ = """
     UPDATE messages
-    SET is_dead_letter = 1,
-        claimed_by = NULL,
-        claimed_at = NULL
-    WHERE id = :message_id
-"""
-
-SQL_CREATE_SESSION = """
-    INSERT INTO sessions (id, queue, dead_letter, last_heartbeat_at, created_at)
-    VALUES (:id, :queue, :dead_letter, :heartbeat_at, :created_at)
-"""
-
-SQL_HEARTBEAT = """
-    UPDATE sessions
-    SET last_heartbeat_at = :heartbeat_at
-    WHERE id = :session_id
-"""
-
-SQL_RELEASE_CLAIMS = """
-    UPDATE messages
-    SET claimed_by = NULL, claimed_at = NULL
-    WHERE claimed_by = :session_id
-"""
-
-SQL_DELETE_SESSION = """
-    DELETE FROM sessions
-    WHERE id = :session_id
-"""
-
-SQL_FIND_STALE_SESSIONS = """
-    SELECT id
-    FROM sessions
-    WHERE last_heartbeat_at < :threshold
+    SET queue = :dlq,
+        visible_at = :now,
+        version = version + 1
+    WHERE id = :message_id AND version = :version
 """
 
 SQL_FIND_MESSAGE = """
-    SELECT id, routing_key, payload, created_at, is_dead_letter, claimed_by, claimed_at
+    SELECT id, queue, payload, created_at, version
     FROM messages
-    WHERE id = :id
-"""
-
-SQL_FIND_SESSION = """
-    SELECT id, queue, dead_letter, last_heartbeat_at, created_at
-    FROM sessions
     WHERE id = :id
 """
 
@@ -88,119 +60,127 @@ class Store:
 
     def __init__(self, db: sqlite.Database) -> None:
         self.db = db
-        self.data_mapper = sqlite.DataMapper()
+        self.dm = sqlite.DataMapper()
 
-    def publish(
+    def declare_queue(
+        self,
+        name: str,
+        dead_letter_queue: str | None,
+        visibility_timeout: float,
+        now: datetime.datetime,
+    ) -> None:
+        try:
+            with self.db.transaction() as tx:
+                tx.execute(
+                    SQL_INSERT_QUEUE,
+                    {
+                        "name": name,
+                        "dead_letter_queue": dead_letter_queue,
+                        "visibility_timeout": visibility_timeout,
+                        "created_at": self.dm.dump_timestamp(now),
+                    },
+                )
+        except sqlite3.IntegrityError as e:
+            if e.sqlite_errorname == "SQLITE_CONSTRAINT_PRIMARYKEY":
+                raise core.QueueAlreadyExistsError(name) from None
+            raise core.QueueNotFoundError(dead_letter_queue) from None
+
+    def find_queue(self, name: str) -> core.Queue:
+        with self.db.transaction(read_only=True) as tx:
+            try:
+                row = tx.query_row(SQL_FIND_QUEUE, {"name": name})
+            except sqlite.NoRowsError:
+                raise core.QueueNotFoundError(name) from None
+            return self._collect_queue(row)
+
+    def publish_message(
         self,
         message_id: str,
-        routing_key: str,
+        queue: str,
         payload: bytes,
         now: datetime.datetime,
     ) -> None:
-        params = {
-            "id": message_id,
-            "routing_key": routing_key,
-            "payload": payload,
-            "created_at": self.data_mapper.dump_timestamp(now),
-            "is_dead_letter": 0,
-        }
-        with self.db.transaction() as tx:
-            tx.execute(SQL_PUBLISH, params)
+        epoch = self.dm.dump_timestamp(now)
+        try:
+            with self.db.transaction() as tx:
+                tx.execute(
+                    SQL_PUBLISH,
+                    {
+                        "id": message_id,
+                        "queue": queue,
+                        "payload": payload,
+                        "created_at": epoch,
+                        "visible_at": epoch,
+                        "version": 0,
+                    },
+                )
+        except sqlite3.IntegrityError:
+            raise core.QueueNotFoundError(queue) from None
 
-    def claim(
+    def claim_message(
         self,
-        session_id: str,
+        queue: str,
         now: datetime.datetime,
-    ) -> Optional[core.Message]:
-        params = {
-            "session_id": session_id,
-            "now": self.data_mapper.dump_timestamp(now),
-        }
+    ) -> core.Message:
         with self.db.transaction(synchronous=False) as tx:
             try:
-                row = tx.query_row(SQL_CLAIM, params)
+                row = tx.query_row(
+                    SQL_CLAIM,
+                    {
+                        "queue": queue,
+                        "now": self.dm.dump_timestamp(now),
+                    },
+                )
             except sqlite.NoRowsError:
-                return None
+                raise core.NoMessagesAvailable(queue) from None
             return self._collect_message(row)
 
-    def ack(self, message_id: str) -> None:
+    def delete_message(self, message_id: str, version: int) -> None:
         with self.db.transaction(synchronous=False) as tx:
-            tx.execute(SQL_ACK, {"message_id": message_id})
+            tx.execute(
+                SQL_DELETE_MESSAGE,
+                {"message_id": message_id, "version": version},
+            )
 
-    def nack(self, message_id: str) -> None:
-        with self.db.transaction(synchronous=False) as tx:
-            tx.execute(SQL_NACK, {"message_id": message_id})
-
-    def create_session(
+    def move_message_to_dlq(
         self,
-        session_id: str,
-        queue: str,
-        dead_letter: bool,
+        message_id: str,
+        version: int,
+        dlq: str,
         now: datetime.datetime,
     ) -> None:
-        params = {
-            "id": session_id,
-            "queue": queue,
-            "dead_letter": int(dead_letter),
-            "heartbeat_at": self.data_mapper.dump_timestamp(now),
-            "created_at": self.data_mapper.dump_timestamp(now),
-        }
         with self.db.transaction() as tx:
-            tx.execute(SQL_CREATE_SESSION, params)
+            tx.execute(
+                SQL_MOVE_TO_DLQ,
+                {
+                    "message_id": message_id,
+                    "version": version,
+                    "dlq": dlq,
+                    "now": self.dm.dump_timestamp(now),
+                },
+            )
 
-    def heartbeat(self, session_id: str, now: datetime.datetime) -> None:
-        params = {
-            "session_id": session_id,
-            "heartbeat_at": self.data_mapper.dump_timestamp(now),
-        }
-        with self.db.transaction(synchronous=False) as tx:
-            tx.execute(SQL_HEARTBEAT, params)
-
-    def close_session(self, session_id: str) -> None:
-        params = {"session_id": session_id}
-        with self.db.transaction() as tx:
-            tx.execute(SQL_RELEASE_CLAIMS, params)
-            tx.execute(SQL_DELETE_SESSION, params)
-
-    def find_stale_sessions(self, threshold: datetime.datetime) -> List[str]:
-        params = {"threshold": self.data_mapper.dump_timestamp(threshold)}
-        with self.db.transaction(read_only=True) as tx:
-            return [row[0] for row in tx.query(SQL_FIND_STALE_SESSIONS, params)]
-
-    def find_message(self, message_id: str) -> Optional[core.Message]:
+    def find_message(self, message_id: str) -> core.Message:
         with self.db.transaction(read_only=True) as tx:
             try:
                 row = tx.query_row(SQL_FIND_MESSAGE, {"id": message_id})
             except sqlite.NoRowsError:
-                return None
+                raise core.MessageNotFoundError(message_id) from None
             return self._collect_message(row)
 
-    def find_session(self, session_id: str) -> Optional[core.Session]:
-        with self.db.transaction(read_only=True) as tx:
-            try:
-                row = tx.query_row(SQL_FIND_SESSION, {"id": session_id})
-            except sqlite.NoRowsError:
-                return None
-            return self._collect_session(row)
+    def _collect_queue(self, row) -> core.Queue:
+        return core.Queue(
+            name=row[0],
+            dead_letter_queue=row[1],
+            visibility_timeout=row[2],
+            created_at=self.dm.load_timestamp(row[3]),
+        )
 
     def _collect_message(self, row) -> core.Message:
         return core.Message(
             id=row[0],
-            routing_key=row[1],
-            payload=row[2],
-            created_at=self.data_mapper.load_timestamp(row[3]),
-            is_dead_letter=bool(row[4]),
-            claimed_by=row[5],
-            claimed_at=(
-                self.data_mapper.load_timestamp(row[6]) if row[6] is not None else None
-            ),
-        )
-
-    def _collect_session(self, row) -> core.Session:
-        return core.Session(
-            id=row[0],
             queue=row[1],
-            dead_letter=bool(row[2]),
-            last_heartbeat_at=self.data_mapper.load_timestamp(row[3]),
-            created_at=self.data_mapper.load_timestamp(row[4]),
+            payload=row[2],
+            created_at=self.dm.load_timestamp(row[3]),
+            version=row[4],
         )

@@ -10,7 +10,6 @@ def _make_schlange(**overrides):
         "dispatcher": mock.Mock(),
         "executor": mock.Mock(),
         "schedule_worker": mock.Mock(),
-        "messaging_sweeper": mock.Mock(),
         "leases_reaper": mock.Mock(),
     }
     workers.update(overrides)
@@ -51,9 +50,9 @@ class SchlangeStopTest(unittest.TestCase):
         second = RuntimeError("second")
         dispatcher = mock.Mock()
         dispatcher.wait.side_effect = first
-        sweeper = mock.Mock()
-        sweeper.wait.side_effect = second
-        s, _ = _make_schlange(dispatcher=dispatcher, messaging_sweeper=sweeper)
+        reaper = mock.Mock()
+        reaper.wait.side_effect = second
+        s, _ = _make_schlange(dispatcher=dispatcher, leases_reaper=reaper)
         with self.assertRaises(ExceptionGroup) as ctx:
             s.stop()
         self.assertEqual(set(ctx.exception.exceptions), {first, second})

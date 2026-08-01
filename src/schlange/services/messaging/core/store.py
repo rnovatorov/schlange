@@ -1,51 +1,54 @@
 import datetime
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from .message import Message
-from .session import Session
+from .queue import Queue
 
 
 class Store(Protocol):
     """
-    Messaging persistence interface. `now` is passed in so all time
-    logic lives in the service; the caller supplies the id for
-    publish/create_session. claim returns the claimed Message (None
-    when no available messages). claim derives the queue and
-    dead-letter flag from the session.
+    Messaging persistence interface.  Each method executes exactly
+    one transaction.  Methods that look up an entity by key raise
+    on not-found instead of returning None.
+
+    ``now`` is passed in so all time logic lives in the service.
+    Operations that take ``version`` perform an optimistic-concurrency
+    check: the mutation is a no-op if the stored version does not
+    match.
     """
 
-    def publish(
+    def declare_queue(
+        self,
+        name: str,
+        dead_letter_queue: str | None,
+        visibility_timeout: float,
+        now: datetime.datetime,
+    ) -> None: ...
+
+    def find_queue(self, name: str) -> Queue: ...
+
+    def publish_message(
         self,
         message_id: str,
-        routing_key: str,
+        queue: str,
         payload: bytes,
         now: datetime.datetime,
     ) -> None: ...
 
-    def claim(
+    def claim_message(
         self,
-        session_id: str,
-        now: datetime.datetime,
-    ) -> Optional[Message]: ...
-
-    def ack(self, message_id: str) -> None: ...
-
-    def nack(self, message_id: str) -> None: ...
-
-    def create_session(
-        self,
-        session_id: str,
         queue: str,
-        dead_letter: bool,
+        now: datetime.datetime,
+    ) -> Message: ...
+
+    def delete_message(self, message_id: str, version: int) -> None: ...
+
+    def move_message_to_dlq(
+        self,
+        message_id: str,
+        version: int,
+        dlq: str,
         now: datetime.datetime,
     ) -> None: ...
 
-    def heartbeat(self, session_id: str, now: datetime.datetime) -> None: ...
-
-    def close_session(self, session_id: str) -> None: ...
-
-    def find_stale_sessions(self, threshold: datetime.datetime) -> List[str]: ...
-
-    def find_message(self, message_id: str) -> Optional[Message]: ...
-
-    def find_session(self, session_id: str) -> Optional[Session]: ...
+    def find_message(self, message_id: str) -> Message: ...

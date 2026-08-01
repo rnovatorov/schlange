@@ -5,6 +5,7 @@ import unittest
 import uuid
 
 from schlange.internal import sqlite
+from schlange.services.messaging import core
 from schlange.services.messaging import sqlite as messaging_sqlite
 
 
@@ -17,6 +18,8 @@ class StoreTest(unittest.TestCase):
         self.db = self.db_ctx.__enter__()
         self.db.migrate(migrations_path=messaging_sqlite.MIGRATIONS_PATH)
         self.store = messaging_sqlite.Store(self.db)
+        self.now = self._now()
+        self.store.declare_queue("orders", None, 30.0, self.now)
 
     def tearDown(self):
         self.db_ctx.__exit__(None, None, None)
@@ -25,192 +28,157 @@ class StoreTest(unittest.TestCase):
     def _now(self) -> datetime.datetime:
         return datetime.datetime.now(datetime.UTC)
 
-    def test_publish(self):
-        now = self._now()
+    def test_declare_queue(self):
+        q = self.store.find_queue("orders")
+        self.assertEqual(q.name, "orders")
+        self.assertIsNone(q.dead_letter_queue)
+        self.assertEqual(q.visibility_timeout, 30.0)
+
+    def test_declare_queue_with_dlq(self):
+        self.store.declare_queue("orders-dlq", None, 60.0, self.now)
+        self.store.declare_queue("payments", "orders-dlq", 10.0, self.now)
+        q = self.store.find_queue("payments")
+        self.assertEqual(q.dead_letter_queue, "orders-dlq")
+        self.assertEqual(q.visibility_timeout, 10.0)
+
+    def test_declare_queue_duplicate_raises(self):
+        with self.assertRaises(core.QueueAlreadyExistsError):
+            self.store.declare_queue("orders", None, 30.0, self.now)
+
+    def test_declare_queue_unknown_dlq_raises(self):
+        with self.assertRaises(core.QueueNotFoundError):
+            self.store.declare_queue("payments", "nope", 30.0, self.now)
+
+    def test_find_queue_not_found_raises(self):
+        with self.assertRaises(core.QueueNotFoundError):
+            self.store.find_queue("nope")
+
+    def test_publish_message(self):
         message_id = str(uuid.uuid4())
-        self.store.publish(message_id, "orders", b"hello", now)
+        self.store.publish_message(message_id, "orders", b"hello", self.now)
         message = self.store.find_message(message_id)
-        self.assertIsNotNone(message)
         self.assertEqual(message.id, message_id)
-        self.assertEqual(message.routing_key, "orders")
+        self.assertEqual(message.queue, "orders")
         self.assertEqual(message.payload, b"hello")
-        self.assertFalse(message.is_dead_letter)
-        self.assertIsNone(message.claimed_by)
-        self.assertIsNone(message.claimed_at)
+        self.assertEqual(message.version, 0)
 
-    def test_claim_available(self):
-        now = self._now()
+    def test_publish_message_unknown_queue_raises(self):
+        with self.assertRaises(core.QueueNotFoundError):
+            self.store.publish_message(
+                str(uuid.uuid4()), "nope", b"hello", self.now
+            )
+
+    def test_claim_message_available(self):
         message_id = str(uuid.uuid4())
-        self.store.publish(message_id, "orders", b"hello", now)
-        session_id = str(uuid.uuid4())
-        self.store.create_session(session_id, "orders", False, now)
-        message = self.store.claim(session_id, now)
-        self.assertIsNotNone(message)
+        self.store.publish_message(message_id, "orders", b"hello", self.now)
+        message = self.store.claim_message("orders", self.now)
         self.assertEqual(message.id, message_id)
-        self.assertEqual(message.routing_key, "orders")
-        self.assertEqual(message.payload, b"hello")
-        found = self.store.find_message(message_id)
-        self.assertEqual(found.claimed_by, session_id)
+        self.assertEqual(message.version, 1)
 
-    def test_claim_no_messages(self):
-        now = self._now()
-        session_id = str(uuid.uuid4())
-        self.store.create_session(session_id, "orders", False, now)
-        message = self.store.claim(session_id, now)
-        self.assertIsNone(message)
+    def test_claim_message_empty_raises(self):
+        with self.assertRaises(core.NoMessagesAvailable):
+            self.store.claim_message("orders", self.now)
 
-    def test_claim_competing_sessions(self):
-        now = self._now()
-        message_id = str(uuid.uuid4())
-        self.store.publish(message_id, "orders", b"hello", now)
-        session_a = str(uuid.uuid4())
-        self.store.create_session(session_a, "orders", False, now)
-        session_b = str(uuid.uuid4())
-        self.store.create_session(session_b, "orders", False, now)
-        claimed_a = self.store.claim(session_a, now)
-        claimed_b = self.store.claim(session_b, now)
-        self.assertIsNotNone(claimed_a)
-        self.assertIsNone(claimed_b)
-        self.assertEqual(claimed_a.id, message_id)
+    def test_claim_message_unknown_queue_raises(self):
+        with self.assertRaises(core.NoMessagesAvailable):
+            self.store.claim_message("nope", self.now)
 
-    def test_claim_fifo(self):
-        first = self._now()
-        second = first + datetime.timedelta(seconds=1)
+    def test_claim_message_fifo(self):
+        first = self.now
+        second = self.now + datetime.timedelta(seconds=1)
         id_first = str(uuid.uuid4())
-        self.store.publish(id_first, "orders", b"one", first)
+        self.store.publish_message(id_first, "orders", b"one", first)
         id_second = str(uuid.uuid4())
-        self.store.publish(id_second, "orders", b"two", second)
-        session_id = str(uuid.uuid4())
-        self.store.create_session(session_id, "orders", False, first)
-        claimed_first = self.store.claim(session_id, second)
-        claimed_second = self.store.claim(session_id, second)
-        self.assertIsNotNone(claimed_first)
+        self.store.publish_message(id_second, "orders", b"two", second)
+        claimed_first = self.store.claim_message("orders", second)
+        claimed_second = self.store.claim_message("orders", second)
         self.assertEqual(claimed_first.id, id_first)
-        self.assertIsNotNone(claimed_second)
         self.assertEqual(claimed_second.id, id_second)
 
-    def test_dead_letter_claim_isolates_by_flag(self):
-        now = self._now()
-        message_id = str(uuid.uuid4())
-        self.store.publish(message_id, "orders", b"hello", now)
-        normal = str(uuid.uuid4())
-        self.store.create_session(normal, "orders", False, now)
-        self.store.claim(normal, now)
-        self.store.nack(message_id)
-        self.assertIsNone(self.store.claim(normal, now))
-        dead_letter = str(uuid.uuid4())
-        self.store.create_session(dead_letter, "orders", True, now)
-        claimed = self.store.claim(dead_letter, now)
-        self.assertIsNotNone(claimed)
-        self.assertEqual(claimed.id, message_id)
+    def test_claim_message_skips_invisible(self):
+        self.store.publish_message(
+            str(uuid.uuid4()), "orders", b"hello", self.now
+        )
+        self.store.claim_message("orders", self.now)
+        with self.assertRaises(core.NoMessagesAvailable):
+            self.store.claim_message("orders", self.now)
 
-    def test_ack_deletes_message(self):
-        now = self._now()
+    def test_claim_message_reclaims_after_timeout(self):
         message_id = str(uuid.uuid4())
-        self.store.publish(message_id, "orders", b"hello", now)
-        session_id = str(uuid.uuid4())
-        self.store.create_session(session_id, "orders", False, now)
-        self.store.claim(session_id, now)
-        self.store.ack(message_id)
-        self.assertIsNone(self.store.find_message(message_id))
+        self.store.publish_message(message_id, "orders", b"hello", self.now)
+        first = self.store.claim_message("orders", self.now)
+        self.assertEqual(first.version, 1)
+        later = self.now + datetime.timedelta(seconds=31)
+        second = self.store.claim_message("orders", later)
+        self.assertEqual(second.id, message_id)
+        self.assertEqual(second.version, 2)
 
-    def test_nack_moves_to_dead_letter(self):
-        now = self._now()
+    def test_claim_message_uses_per_queue_visibility_timeout(self):
+        self.store.declare_queue("fast", None, 1.0, self.now)
         message_id = str(uuid.uuid4())
-        self.store.publish(message_id, "orders", b"hello", now)
-        session_id = str(uuid.uuid4())
-        self.store.create_session(session_id, "orders", False, now)
-        self.store.claim(session_id, now)
-        self.store.nack(message_id)
+        self.store.publish_message(message_id, "fast", b"hello", self.now)
+        first = self.store.claim_message("fast", self.now)
+        self.assertEqual(first.version, 1)
+        # With a 1-second timeout, the message reappears quickly.
+        later = self.now + datetime.timedelta(seconds=2)
+        second = self.store.claim_message("fast", later)
+        self.assertEqual(second.id, message_id)
+
+    def test_claim_message_competing_consumers(self):
+        message_id = str(uuid.uuid4())
+        self.store.publish_message(message_id, "orders", b"hello", self.now)
+        claimed_a = self.store.claim_message("orders", self.now)
+        with self.assertRaises(core.NoMessagesAvailable):
+            self.store.claim_message("orders", self.now)
+        self.assertEqual(claimed_a.id, message_id)
+
+    def test_delete_message(self):
+        message_id = str(uuid.uuid4())
+        self.store.publish_message(message_id, "orders", b"hello", self.now)
+        claimed = self.store.claim_message("orders", self.now)
+        self.store.delete_message(claimed.id, claimed.version)
+        with self.assertRaises(core.MessageNotFoundError):
+            self.store.find_message(message_id)
+
+    def test_delete_message_wrong_version_is_noop(self):
+        message_id = str(uuid.uuid4())
+        self.store.publish_message(message_id, "orders", b"hello", self.now)
+        claimed = self.store.claim_message("orders", self.now)
+        self.store.delete_message(claimed.id, claimed.version + 999)
         message = self.store.find_message(message_id)
-        self.assertIsNotNone(message)
-        self.assertEqual(message.routing_key, "orders")
-        self.assertTrue(message.is_dead_letter)
-        self.assertIsNone(message.claimed_by)
-        self.assertIsNone(message.claimed_at)
+        self.assertEqual(message.version, claimed.version)
 
-    def test_nack_dead_letter_idempotent(self):
-        now = self._now()
+    def test_delete_message_nonexistent_is_noop(self):
+        self.store.delete_message("does-not-exist", 0)
+
+    def test_move_message_to_dlq(self):
+        self.store.declare_queue("orders-dlq", None, 60.0, self.now)
         message_id = str(uuid.uuid4())
-        self.store.publish(message_id, "orders", b"hello", now)
-        self.store.nack(message_id)
-        self.store.nack(message_id)
+        self.store.publish_message(message_id, "orders", b"hello", self.now)
+        claimed = self.store.claim_message("orders", self.now)
+        self.store.move_message_to_dlq(
+            claimed.id, claimed.version, "orders-dlq", self.now
+        )
         message = self.store.find_message(message_id)
-        self.assertIsNotNone(message)
-        self.assertTrue(message.is_dead_letter)
+        self.assertEqual(message.queue, "orders-dlq")
+        self.assertEqual(message.version, claimed.version + 1)
+        dlq_msg = self.store.claim_message("orders-dlq", self.now)
+        self.assertEqual(dlq_msg.id, message_id)
 
-    def test_create_session(self):
-        now = self._now()
-        session_id = str(uuid.uuid4())
-        self.store.create_session(session_id, "orders", False, now)
-        session = self.store.find_session(session_id)
-        self.assertIsNotNone(session)
-        self.assertEqual(session.id, session_id)
-        self.assertEqual(session.queue, "orders")
-        self.assertFalse(session.dead_letter)
-
-    def test_create_session_dead_letter(self):
-        now = self._now()
-        session_id = str(uuid.uuid4())
-        self.store.create_session(session_id, "orders", True, now)
-        session = self.store.find_session(session_id)
-        self.assertIsNotNone(session)
-        self.assertEqual(session.queue, "orders")
-        self.assertTrue(session.dead_letter)
-
-    def test_heartbeat_updates_timestamp(self):
-        created = self._now()
-        session_id = str(uuid.uuid4())
-        self.store.create_session(session_id, "orders", False, created)
-        later = created + datetime.timedelta(seconds=10)
-        self.store.heartbeat(session_id, later)
-        session = self.store.find_session(session_id)
-        self.assertIsNotNone(session)
-        self.assertEqual(session.last_heartbeat_at, later)
-
-    def test_close_session_releases_claims(self):
-        now = self._now()
+    def test_move_message_to_dlq_wrong_version_is_noop(self):
+        self.store.declare_queue("orders-dlq", None, 60.0, self.now)
         message_id = str(uuid.uuid4())
-        self.store.publish(message_id, "orders", b"hello", now)
-        session_id = str(uuid.uuid4())
-        self.store.create_session(session_id, "orders", False, now)
-        self.store.claim(session_id, now)
-        self.store.close_session(session_id)
+        self.store.publish_message(message_id, "orders", b"hello", self.now)
+        claimed = self.store.claim_message("orders", self.now)
+        self.store.move_message_to_dlq(
+            claimed.id, claimed.version + 999, "orders-dlq", self.now
+        )
         message = self.store.find_message(message_id)
-        self.assertIsNotNone(message)
-        self.assertIsNone(message.claimed_by)
-        self.assertIsNone(message.claimed_at)
-        self.assertIsNone(self.store.find_session(session_id))
+        self.assertEqual(message.queue, "orders")
 
-    def test_find_stale_sessions(self):
-        now = self._now()
-        fresh = now - datetime.timedelta(seconds=1)
-        stale = now - datetime.timedelta(seconds=10)
-        fresh_id = str(uuid.uuid4())
-        self.store.create_session(fresh_id, "orders", False, fresh)
-        stale_id = str(uuid.uuid4())
-        self.store.create_session(stale_id, "orders", False, stale)
-        stale_ids = self.store.find_stale_sessions(now - datetime.timedelta(seconds=5))
-        self.assertNotIn(fresh_id, stale_ids)
-        self.assertIn(stale_id, stale_ids)
-
-    def test_find_message_nonexistent_returns_none(self):
-        self.assertIsNone(self.store.find_message("does-not-exist"))
-
-    def test_find_session_nonexistent_returns_none(self):
-        self.assertIsNone(self.store.find_session("does-not-exist"))
-
-    def test_ack_nonexistent_is_noop(self):
-        self.store.ack("does-not-exist")
-
-    def test_nack_nonexistent_is_noop(self):
-        self.store.nack("does-not-exist")
-
-    def test_heartbeat_nonexistent_is_noop(self):
-        self.store.heartbeat("does-not-exist", self._now())
-
-    def test_close_session_nonexistent_is_noop(self):
-        self.store.close_session("does-not-exist")
+    def test_find_message_not_found_raises(self):
+        with self.assertRaises(core.MessageNotFoundError):
+            self.store.find_message("does-not-exist")
 
 
 if __name__ == "__main__":

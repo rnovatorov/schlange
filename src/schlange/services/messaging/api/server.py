@@ -13,40 +13,34 @@ class Server:
 
     service: core.Service
 
-    def publish(
+    def declare_queue(self, request: messaging.DeclareQueueRequest) -> None:
+        self.service.declare_queue(
+            name=request.name,
+            dead_letter_queue=request.dead_letter_queue,
+            visibility_timeout=request.visibility_timeout,
+        )
+
+    def publish_message(
         self, request: messaging.PublishMessageRequest
     ) -> messaging.PublishMessageResponse:
-        message_id = self.service.publish(request.routing_key, request.payload)
+        message_id = self.service.publish_message(request.queue, request.payload)
         return messaging.PublishMessageResponse(message_id=message_id)
 
-    def claim(
+    def claim_message(
         self, request: messaging.ClaimMessageRequest
     ) -> messaging.ClaimMessageResponse:
-        result = self.service.claim(request.session_id)
-        if result is None:
-            return messaging.ClaimMessageResponse(message=None)
+        result = self.service.claim_message(request.queue)
         return messaging.ClaimMessageResponse(
             message=messaging.Message(
                 id=result.id,
-                routing_key=result.routing_key,
+                queue=result.queue,
                 payload=result.payload,
+                version=result.version,
             )
         )
 
-    def ack(self, request: messaging.AckMessageRequest) -> None:
-        self.service.ack(request.message_id)
+    def ack_message(self, request: messaging.AckMessageRequest) -> None:
+        self.service.ack_message(request.message_id, request.version)
 
-    def nack(self, request: messaging.NackMessageRequest) -> None:
-        self.service.nack(request.message_id)
-
-    def create_session(
-        self, request: messaging.CreateSessionRequest
-    ) -> messaging.CreateSessionResponse:
-        session_id = self.service.create_session(request.queue, request.dead_letter)
-        return messaging.CreateSessionResponse(session_id=session_id)
-
-    def heartbeat(self, request: messaging.HeartbeatSessionRequest) -> None:
-        self.service.heartbeat(request.session_id)
-
-    def close_session(self, request: messaging.CloseSessionRequest) -> None:
-        self.service.close_session(request.session_id)
+    def nack_message(self, request: messaging.NackMessageRequest) -> None:
+        self.service.nack_message(request.message_id, request.version)

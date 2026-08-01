@@ -1,22 +1,18 @@
+CREATE TABLE queues (
+    name TEXT PRIMARY KEY,
+    dead_letter_queue TEXT REFERENCES queues(name),
+    visibility_timeout REAL NOT NULL,
+    created_at REAL NOT NULL
+);
+
 CREATE TABLE messages (
     id TEXT PRIMARY KEY,
-    routing_key TEXT NOT NULL,
+    queue TEXT NOT NULL REFERENCES queues(name),
     payload BLOB NOT NULL,
-    created_at TEXT NOT NULL,
-    is_dead_letter INTEGER NOT NULL DEFAULT 0,
-    claimed_by TEXT,
-    claimed_at TEXT
+    created_at REAL NOT NULL,
+    visible_at REAL NOT NULL,
+    version INTEGER NOT NULL
 );
 
-CREATE TABLE sessions (
-    id TEXT PRIMARY KEY,
-    queue TEXT NOT NULL,
-    dead_letter INTEGER NOT NULL DEFAULT 0,
-    last_heartbeat_at TEXT NOT NULL,
-    created_at TEXT NOT NULL
-);
-
-CREATE INDEX idx_messages_routing ON messages(routing_key, created_at)
-    WHERE claimed_by IS NULL;
-CREATE INDEX idx_messages_claimed_by ON messages(claimed_by);
-CREATE INDEX idx_sessions_heartbeat ON sessions(last_heartbeat_at);
+CREATE INDEX idx_messages_queue_created ON messages(queue, created_at);
+CREATE INDEX idx_messages_visible_at ON messages(visible_at);

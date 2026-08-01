@@ -19,9 +19,9 @@ class MessageQueue:
                 "args": request.args,
             }
         ).encode()
-        self.messaging_server.publish(
+        self.messaging_server.publish_message(
             messaging_api.PublishMessageRequest(
-                routing_key=request.kind,
+                queue=request.kind,
                 payload=payload,
             )
         )

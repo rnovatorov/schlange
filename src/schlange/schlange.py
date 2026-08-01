@@ -13,7 +13,6 @@ from schlange.services.leases import background as leases_background
 from schlange.services.leases import core as leases_core
 from schlange.services.leases import sqlite as leases_sqlite
 from schlange.services.messaging import api as messaging_api
-from schlange.services.messaging import background as messaging_background
 from schlange.services.messaging import core as messaging_core
 from schlange.services.messaging import sqlite as messaging_sqlite
 from schlange.services.schedules import background as schedules_background
@@ -53,9 +52,6 @@ DEFAULT_DISPATCHER_LEASE_TTL = 5.0
 
 DEFAULT_LEASE_REAPER_INTERVAL = 60
 
-DEFAULT_MESSAGING_SESSION_TIMEOUT = 5.0
-DEFAULT_MESSAGING_SWEEPER_INTERVAL = 1
-
 
 @dataclasses.dataclass
 class Schlange:
@@ -67,7 +63,6 @@ class Schlange:
     dispatcher: tasks_background.Dispatcher
     cleanup_worker: tasks_background.CleanupWorker
     schedule_worker: schedules_background.ScheduleWorker
-    messaging_sweeper: messaging_background.Sweeper
     leases_reaper: leases_background.Reaper
 
     def __enter__(self) -> "Schlange":
@@ -82,7 +77,6 @@ class Schlange:
         self.dispatcher.start()
         self.cleanup_worker.start()
         self.schedule_worker.start()
-        self.messaging_sweeper.start()
         self.leases_reaper.start()
 
     def stop(self) -> None:
@@ -91,7 +85,6 @@ class Schlange:
             self.dispatcher,
             self.executor,
             self.schedule_worker,
-            self.messaging_sweeper,
             self.leases_reaper,
         ]
         for w in workers:
@@ -123,8 +116,6 @@ class Schlange:
         dispatcher_interval: float = DEFAULT_DISPATCHER_INTERVAL,
         dispatcher_lease_ttl: float = DEFAULT_DISPATCHER_LEASE_TTL,
         lease_reaper_interval: float = DEFAULT_LEASE_REAPER_INTERVAL,
-        messaging_session_timeout: float = DEFAULT_MESSAGING_SESSION_TIMEOUT,
-        messaging_sweeper_interval: float = DEFAULT_MESSAGING_SWEEPER_INTERVAL,
     ) -> Generator["Schlange", None, None]:
         read_pool_capacity = calculate_optimal_database_read_pool_capacity(
             executor_threads
@@ -152,7 +143,6 @@ class Schlange:
             lease_service = leases_core.Service(store=lease_store)
             messaging_service = messaging_core.Service(
                 store=messaging_store,
-                session_timeout=messaging_session_timeout,
             )
             lease_server = leases_api.Server(service=lease_service)
             messaging_server = messaging_api.Server(service=messaging_service)
@@ -189,10 +179,6 @@ class Schlange:
                 interval=schedule_worker_interval,
                 schedule_service=schedule_service,
             )
-            messaging_sweeper = messaging_background.Sweeper(
-                service=messaging_service,
-                interval=messaging_sweeper_interval,
-            )
             leases_reaper = leases_background.Reaper(
                 service=lease_service,
                 interval=lease_reaper_interval,
@@ -205,7 +191,6 @@ class Schlange:
                 dispatcher=dispatcher,
                 cleanup_worker=cleanup_worker,
                 schedule_worker=schedule_worker,
-                messaging_sweeper=messaging_sweeper,
                 leases_reaper=leases_reaper,
             )
 
@@ -306,7 +291,6 @@ def calculate_optimal_database_read_pool_capacity(executor_threads: int) -> int:
     schedule_worker = 1
     cleanup_worker = 1
     dispatcher = 1
-    messaging_sweeper = 1
     leases_reaper = 1
     additional_capacity = 1
     return (
@@ -315,7 +299,6 @@ def calculate_optimal_database_read_pool_capacity(executor_threads: int) -> int:
         + cleanup_worker
         + schedule_worker
         + dispatcher
-        + messaging_sweeper
         + leases_reaper
         + additional_capacity
     )
