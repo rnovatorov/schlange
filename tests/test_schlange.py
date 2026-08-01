@@ -7,8 +7,8 @@ from schlange.schlange import Schlange
 def _make_schlange(**overrides):
     workers = {
         "cleanup_worker": mock.Mock(),
+        "consumers": [mock.Mock()],
         "dispatcher": mock.Mock(),
-        "executor": mock.Mock(),
         "schedule_worker": mock.Mock(),
         "leases_reaper": mock.Mock(),
     }
@@ -16,10 +16,18 @@ def _make_schlange(**overrides):
     s = Schlange(
         task_service=None,
         default_retry_policy=None,
+        default_visibility_timeout=30.0,
         schedule_service=None,
         **workers,
     )
-    return s, workers.values()
+    individual = [
+        *workers["consumers"],
+        workers["cleanup_worker"],
+        workers["dispatcher"],
+        workers["schedule_worker"],
+        workers["leases_reaper"],
+    ]
+    return s, individual
 
 
 class SchlangeStopTest(unittest.TestCase):
@@ -32,10 +40,10 @@ class SchlangeStopTest(unittest.TestCase):
             w.wait.assert_called_once()
 
     def test_stop_does_not_bail_when_a_worker_wait_raises(self):
-        boom = RuntimeError("executor boom")
-        executor = mock.Mock()
-        executor.wait.side_effect = boom
-        s, workers = _make_schlange(executor=executor)
+        boom = RuntimeError("consumer boom")
+        consumer = mock.Mock()
+        consumer.wait.side_effect = boom
+        s, workers = _make_schlange(consumers=[consumer])
         with self.assertRaises(ExceptionGroup) as ctx:
             s.stop()
         # every worker was still cancelled and waited despite the raise

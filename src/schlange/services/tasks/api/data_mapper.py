@@ -11,6 +11,7 @@ class DataMapper:
             kind=task.kind,
             args=task.args,
             state=tasks.TaskState(task.state.value),
+            visibility_timeout=task.visibility_timeout,
         )
 
     def dump_retry_policy(self, policy: internal_core.RetryPolicy) -> tasks.RetryPolicy:

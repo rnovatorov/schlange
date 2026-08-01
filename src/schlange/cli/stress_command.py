@@ -4,6 +4,7 @@ import threading
 import time
 
 import schlange
+from schlange.services.execution import core as execution_core
 
 from .command import Command
 from .subparsers import Subparsers
@@ -34,8 +35,8 @@ class StressCommand(Command):
             "-w",
             "--workers",
             type=int,
-            default=schlange.DEFAULT_EXECUTOR_THREADS,
-            help="number of concurrent execution workers",
+            default=4,
+            help="number of concurrent consumers per kind",
         )
         stress_parser.add_argument(
             "--min-task-duration",
@@ -61,7 +62,7 @@ class StressCommand(Command):
         lock = threading.Lock()
         tasks_handled = 0
 
-        def handle_task(task: schlange.Task) -> None:
+        def handle_task(execution: execution_core.TaskExecution) -> None:
             duration = random.random() * (
                 args.max_task_duration - args.min_task_duration
             )
@@ -75,8 +76,8 @@ class StressCommand(Command):
         with schlange.new(
             task_database_path=args.task_database_path,
             schedule_database_path=args.schedule_database_path,
-            task_handler=handle_task,
-            executor_threads=args.workers,
+            handlers={"stress": handle_task},
+            consumers_per_kind=args.workers,
         ) as sch:
             for i in range(args.schedules):
                 sch.create_schedule(

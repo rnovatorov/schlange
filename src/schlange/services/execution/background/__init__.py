@@ -1,5 +1,5 @@
-from .executor import Executor
+from .consumer import Consumer
 
 __all__ = [
-    "Executor",
+    "Consumer",
 ]

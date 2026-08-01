@@ -3,6 +3,7 @@ import threading
 import time
 
 import schlange
+from schlange.services.execution import core as execution_core
 
 from .command import Command
 from .subparsers import Subparsers
@@ -22,8 +23,8 @@ class BenchCommand(Command):
             "-w",
             "--workers",
             type=int,
-            default=schlange.DEFAULT_EXECUTOR_THREADS,
-            help="number of concurrent execution workers",
+            default=4,
+            help="number of concurrent consumers per kind",
         )
 
     @staticmethod
@@ -32,7 +33,7 @@ class BenchCommand(Command):
         tasks_handled = 0
         done = threading.Event()
 
-        def handle_task(task: schlange.Task) -> None:
+        def handle_bench(execution: execution_core.TaskExecution) -> None:
             nonlocal tasks_handled
             with lock:
                 tasks_handled += 1
@@ -42,8 +43,8 @@ class BenchCommand(Command):
         with schlange.new(
             task_database_path=args.task_database_path,
             schedule_database_path=args.schedule_database_path,
-            task_handler=handle_task,
-            executor_threads=args.workers,
+            handlers={"bench": handle_bench},
+            consumers_per_kind=args.workers,
         ) as sch:
             started_creating_tasks_at = time.time()
             for i in range(args.tasks):
@@ -61,5 +62,5 @@ class BenchCommand(Command):
             f"creating {args.tasks} tasks using 1 workers took {creating_tasks_took:.2f} seconds, rate is {args.tasks/creating_tasks_took:.2f} tasks per second"
         )
         print(
-            f"handling {args.tasks} tasks using {args.workers} workers took {handling_tasks_took:.2f} seconds, rate is {args.tasks/handling_tasks_took:.2f} tasks per second"
+            f"handling {args.tasks} tasks using {args.workers} consumers took {handling_tasks_took:.2f} seconds, rate is {args.tasks/handling_tasks_took:.2f} tasks per second"
         )

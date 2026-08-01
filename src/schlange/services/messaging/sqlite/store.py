@@ -117,7 +117,7 @@ class Store:
         created_at: datetime.datetime,
     ) -> None:
         epoch = self.dm.dump_timestamp(created_at)
-        with self.db.transaction() as tx:
+        with self.db.transaction(synchronous=False) as tx:
             try:
                 tx.execute(
                     SQL_PUBLISH,
@@ -165,7 +165,7 @@ class Store:
         version: int,
         now: datetime.datetime,
     ) -> None:
-        with self.db.transaction() as tx:
+        with self.db.transaction(synchronous=False) as tx:
             tx.execute(
                 SQL_REQUEUE,
                 {
@@ -182,7 +182,7 @@ class Store:
         dlq_queue: str,
         now: datetime.datetime,
     ) -> None:
-        with self.db.transaction() as tx:
+        with self.db.transaction(synchronous=False) as tx:
             tx.execute(
                 SQL_MOVE_TO_DLQ,
                 {

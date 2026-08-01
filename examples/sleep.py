@@ -10,15 +10,16 @@ Hello Task-4
 import time
 
 import schlange
+from schlange.services.execution import core as execution_core
 
 
-def handle_task(task: schlange.Task) -> None:
-    print("Hello", task.args["name"])
+def handle_sleep(execution: execution_core.TaskExecution) -> None:
+    print("Hello", execution.args["name"])
     time.sleep(1)
 
 
 def main():
-    with schlange.new(task_handler=handle_task) as sch:
+    with schlange.new(handlers={"sleep": handle_sleep}) as sch:
         for i in range(5):
             sch.create_task(args={"name": f"Task-{i}"}, kind="sleep", delay=i)
         with sch:

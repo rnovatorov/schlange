@@ -2,10 +2,10 @@ import logging
 
 from schlange.internal import core
 from schlange.schlange import (
-    DEFAULT_EXECUTOR_THREADS,
     DEFAULT_RETRY_POLICY,
     DEFAULT_SCHEDULE_DATABASE_PATH,
     DEFAULT_TASK_DATABASE_PATH,
+    DEFAULT_VISIBILITY_TIMEOUT,
     Schlange,
     new,
 )
@@ -26,10 +26,10 @@ logging.getLogger(__name__).handlers = [logging.NullHandler()]
 
 __all__ = [
     "CleanupPolicy",
-    "DEFAULT_EXECUTOR_THREADS",
     "DEFAULT_RETRY_POLICY",
     "DEFAULT_SCHEDULE_DATABASE_PATH",
     "DEFAULT_TASK_DATABASE_PATH",
+    "DEFAULT_VISIBILITY_TIMEOUT",
     "DTO",
     "RetryPolicy",
     "Schedule",

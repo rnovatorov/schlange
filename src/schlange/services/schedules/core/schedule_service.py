@@ -17,6 +17,7 @@ class ScheduleService:
 
     schedule_repository: ScheduleRepository
     task_service: tasks_core.TaskService
+    task_visibility_timeout: float
 
     def create_schedule(
         self,
@@ -66,6 +67,7 @@ class ScheduleService:
                 args=schedule.task_args,
                 kind=schedule.task_kind,
                 delay=0,
+                visibility_timeout=self.task_visibility_timeout,
                 retry_policy=schedule.task_retry_policy,
                 schedule_id=schedule_id,
             )

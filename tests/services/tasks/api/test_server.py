@@ -65,17 +65,19 @@ class TaskServerTest(unittest.TestCase):
                 args={"key": "value"},
                 delay=0,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         task = response.task
         self.assertEqual(task.kind, "test_kind")
         self.assertEqual(task.args, {"key": "value"})
         self.assertEqual(task.state, tasks_api.TaskState.ACTIVE)
+        self.assertEqual(task.visibility_timeout, 30.0)
         self.assertIsInstance(task.state, tasks_api.TaskState)
         self.assertIsInstance(task.id, str)
         self.assertEqual(
             {f.name for f in dataclasses.fields(task)},
-            {"id", "kind", "args", "state"},
+            {"id", "kind", "args", "state", "visibility_timeout"},
         )
 
     def test_get_task(self):
@@ -85,6 +87,7 @@ class TaskServerTest(unittest.TestCase):
                 args={"key": "value"},
                 delay=0,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         response = self.server.get_task(tasks_api.GetTaskRequest(id=created.task.id))
@@ -101,6 +104,7 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=0,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         response = self.server.list_tasks(
@@ -116,10 +120,11 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=0,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         self.server.delete_task(tasks_api.DeleteTaskRequest(id=created.task.id))
-        with self.assertRaises(tasks_core.TaskNotFoundError):
+        with self.assertRaises(tasks_api_service.NotFoundError):
             self.server.get_task(tasks_api.GetTaskRequest(id=created.task.id))
 
     def test_end_execution_success(self):
@@ -129,6 +134,7 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=0,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         seq_num = self._dispatch_and_get_seq_num(created.task.id)
@@ -149,6 +155,7 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=0,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         before = self.task_service.task(created.task.id).ready_at
@@ -177,6 +184,7 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=0,
                 retry_policy=retry_policy,
+                visibility_timeout=30.0,
             )
         )
         for _ in range(3):
@@ -198,6 +206,7 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=0,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         seq_num = self._dispatch_and_get_seq_num(created.task.id)
@@ -225,9 +234,10 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=0,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
-        with self.assertRaises(tasks_core.TaskExecutionNotFoundError):
+        with self.assertRaises(tasks_api_service.FailedPreconditionError):
             self.server.end_execution(
                 tasks_api.EndExecutionRequest(
                     task_id=created.task.id,
@@ -243,6 +253,7 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=3600,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         ready = self.server.create_task(
@@ -251,6 +262,7 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=0,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         now = datetime.datetime.now(datetime.UTC)
@@ -262,6 +274,7 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=0,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         seq_num = self._dispatch_and_get_seq_num(completed.task.id)
@@ -316,6 +329,7 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=0,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         seq_num = self._dispatch_and_get_seq_num(created.task.id)
@@ -336,6 +350,7 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=3600,
                 retry_policy=_retry_policy(),
+                visibility_timeout=30.0,
             )
         )
         with self.assertRaises(tasks_core.TaskNotReadyError):
@@ -343,11 +358,11 @@ class TaskServerTest(unittest.TestCase):
 
     def test_unknown_task_id_raises_not_found(self):
         unknown_id = "nonexistent-task-id"
-        with self.assertRaises(tasks_core.TaskNotFoundError):
+        with self.assertRaises(tasks_api_service.NotFoundError):
             self.server.get_task(tasks_api.GetTaskRequest(id=unknown_id))
-        with self.assertRaises(tasks_core.TaskNotFoundError):
+        with self.assertRaises(tasks_api_service.NotFoundError):
             self.server.delete_task(tasks_api.DeleteTaskRequest(id=unknown_id))
-        with self.assertRaises(tasks_core.TaskNotFoundError):
+        with self.assertRaises(tasks_api_service.NotFoundError):
             self.server.end_execution(
                 tasks_api.EndExecutionRequest(
                     task_id=unknown_id,
@@ -369,6 +384,7 @@ class TaskServerTest(unittest.TestCase):
                 args={},
                 delay=0,
                 retry_policy=retry_policy,
+                visibility_timeout=30.0,
             )
         )
         for _ in range(3):
@@ -412,6 +428,7 @@ class DataMapperTest(unittest.TestCase):
                 max_delay=None,
                 max_attempts=3,
             ),
+            visibility_timeout=30.0,
             executions=[],
             schedule_id=None,
         )
@@ -420,6 +437,7 @@ class DataMapperTest(unittest.TestCase):
         self.assertEqual(task.id, "task-1")
         self.assertEqual(task.kind, "test_kind")
         self.assertEqual(task.args, {"key": "value"})
+        self.assertEqual(task.visibility_timeout, 30.0)
         self.assertIsInstance(task.state, tasks_api.TaskState)
         self.assertEqual(task.state, tasks_api.TaskState.ACTIVE)
 

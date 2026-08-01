@@ -1,13 +1,14 @@
 import contextlib
 import dataclasses
 import logging
-import os
 import pathlib
 import uuid
 from typing import Generator, List, Optional
 
 from schlange.internal import core, sqlite
+from schlange.services.execution import api as execution_api
 from schlange.services.execution import background as execution_background
+from schlange.services.execution import core as execution_core
 from schlange.services.leases import api as leases_api
 from schlange.services.leases import background as leases_background
 from schlange.services.leases import core as leases_core
@@ -36,8 +37,10 @@ DEFAULT_RETRY_POLICY = tasks_core.RetryPolicy(
     max_attempts=20,
 )
 
-DEFAULT_EXECUTOR_INTERVAL = 1
-DEFAULT_EXECUTOR_THREADS = os.cpu_count() or 4
+DEFAULT_VISIBILITY_TIMEOUT = 30.0
+DEFAULT_MAX_DELIVERY_COUNT = 5
+DEFAULT_CONSUMER_INTERVAL = 1
+DEFAULT_CONSUMERS_PER_KIND = 1
 
 DEFAULT_CLEANUP_POLICY = tasks_core.CleanupPolicy(
     delete_succeeded_after=60 * 60 * 24,
@@ -58,8 +61,9 @@ class Schlange:
 
     task_service: tasks_core.TaskService
     default_retry_policy: tasks_core.RetryPolicy
+    default_visibility_timeout: float
     schedule_service: schedules_core.ScheduleService
-    executor: execution_background.Executor
+    consumers: List[execution_background.Consumer]
     dispatcher: tasks_background.Dispatcher
     cleanup_worker: tasks_background.CleanupWorker
     schedule_worker: schedules_background.ScheduleWorker
@@ -73,17 +77,18 @@ class Schlange:
         self.stop()
 
     def start(self) -> None:
-        self.executor.start()
+        for consumer in self.consumers:
+            consumer.start()
         self.dispatcher.start()
         self.cleanup_worker.start()
         self.schedule_worker.start()
         self.leases_reaper.start()
 
     def stop(self) -> None:
-        workers = [
+        workers: list = [
+            *self.consumers,
             self.cleanup_worker,
             self.dispatcher,
-            self.executor,
             self.schedule_worker,
             self.leases_reaper,
         ]
@@ -102,14 +107,16 @@ class Schlange:
     @contextlib.contextmanager
     def new(
         cls,
+        handlers: dict[str, execution_core.Handler] = {},
         task_database_path: pathlib.Path = DEFAULT_TASK_DATABASE_PATH,
         schedule_database_path: pathlib.Path = DEFAULT_SCHEDULE_DATABASE_PATH,
         lease_database_path: pathlib.Path = DEFAULT_LEASE_DATABASE_PATH,
         messaging_database_path: pathlib.Path = DEFAULT_MESSAGING_DATABASE_PATH,
-        task_handler: Optional[tasks_core.TaskHandler] = None,
         default_retry_policy: tasks_core.RetryPolicy = DEFAULT_RETRY_POLICY,
-        executor_interval: float = DEFAULT_EXECUTOR_INTERVAL,
-        executor_threads: int = DEFAULT_EXECUTOR_THREADS,
+        default_visibility_timeout: float = DEFAULT_VISIBILITY_TIMEOUT,
+        max_delivery_count: int = DEFAULT_MAX_DELIVERY_COUNT,
+        consumer_interval: float = DEFAULT_CONSUMER_INTERVAL,
+        consumers_per_kind: int = DEFAULT_CONSUMERS_PER_KIND,
         cleanup_policy: tasks_core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
@@ -118,7 +125,7 @@ class Schlange:
         lease_reaper_interval: float = DEFAULT_LEASE_REAPER_INTERVAL,
     ) -> Generator["Schlange", None, None]:
         read_pool_capacity = calculate_optimal_database_read_pool_capacity(
-            executor_threads
+            consumers_per_kind, len(handlers)
         )
         with sqlite.Database.open(
             path=task_database_path,
@@ -146,7 +153,10 @@ class Schlange:
             )
             lease_server = leases_api.Server(service=lease_service)
             messaging_server = messaging_api.Server(service=messaging_service)
-            message_queue = tasks_api.MessageQueue(messaging_server=messaging_server)
+            message_queue = tasks_api.MessageQueue(
+                messaging_server=messaging_server,
+                max_delivery_count=max_delivery_count,
+            )
             task_lease_service = tasks_api.LeaseService(lease_server=lease_server)
             task_service = tasks_core.TaskService(
                 task_repository=task_repository,
@@ -157,12 +167,26 @@ class Schlange:
             schedule_service = schedules_core.ScheduleService(
                 schedule_repository=schedule_repository,
                 task_service=task_service,
+                task_visibility_timeout=default_visibility_timeout,
             )
-            executor = execution_background.Executor(
-                interval=executor_interval,
-                task_service=task_service,
-                threads=executor_threads,
+            task_server = tasks_api.Server(service=task_service)
+            task_service_adapter = execution_api.TaskServiceAdapter(
+                task_server=task_server,
             )
+            execution_service = execution_core.ExecutionService(
+                handlers=handlers,
+                task_service=task_service_adapter,
+            )
+            consumers = []
+            for kind in handlers:
+                for _ in range(consumers_per_kind):
+                    consumer = execution_background.Consumer(
+                        queue=kind,
+                        interval=consumer_interval,
+                        messaging_server=messaging_server,
+                        execution_service=execution_service,
+                    )
+                    consumers.append(consumer)
             dispatcher = tasks_background.Dispatcher(
                 service=task_service,
                 holder=str(uuid.uuid4()),
@@ -186,8 +210,9 @@ class Schlange:
             yield cls(
                 task_service=task_service,
                 default_retry_policy=default_retry_policy,
+                default_visibility_timeout=default_visibility_timeout,
                 schedule_service=schedule_service,
-                executor=executor,
+                consumers=consumers,
                 dispatcher=dispatcher,
                 cleanup_worker=cleanup_worker,
                 schedule_worker=schedule_worker,
@@ -199,11 +224,14 @@ class Schlange:
         args: core.DTO,
         kind: str,
         delay: float = 0.0,
+        visibility_timeout: Optional[float] = None,
         retry_policy: Optional[tasks_core.RetryPolicy] = None,
         id: Optional[str] = None,
     ) -> tasks_core.Task:
         if retry_policy is None:
             retry_policy = self.default_retry_policy
+        if visibility_timeout is None:
+            visibility_timeout = self.default_visibility_timeout
         LOGGER.debug(
             "creating task: args=%s, delay=%f, retry_policy=%r",
             args,
@@ -214,6 +242,7 @@ class Schlange:
             args=args,
             kind=kind,
             delay=delay,
+            visibility_timeout=visibility_timeout,
             retry_policy=retry_policy,
             id=id,
         )
@@ -286,19 +315,10 @@ class Schlange:
 new = Schlange.new
 
 
-def calculate_optimal_database_read_pool_capacity(executor_threads: int) -> int:
-    executor = 1
-    schedule_worker = 1
-    cleanup_worker = 1
-    dispatcher = 1
-    leases_reaper = 1
-    additional_capacity = 1
-    return (
-        executor
-        + executor_threads
-        + cleanup_worker
-        + schedule_worker
-        + dispatcher
-        + leases_reaper
-        + additional_capacity
-    )
+def calculate_optimal_database_read_pool_capacity(
+    consumers_per_kind: int, num_kinds: int
+) -> int:
+    consumers = consumers_per_kind * num_kinds
+    background_workers = 4
+    additional_capacity = 2
+    return consumers + background_workers + additional_capacity
