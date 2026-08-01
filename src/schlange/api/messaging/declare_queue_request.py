@@ -5,4 +5,4 @@ import dataclasses
 class DeclareQueueRequest:
     name: str
     dead_letter_queue: str | None
-    visibility_timeout: float
+    max_delivery_count: int

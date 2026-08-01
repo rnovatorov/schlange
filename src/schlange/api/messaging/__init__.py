@@ -3,9 +3,9 @@ from .claim_message_request import ClaimMessageRequest
 from .claim_message_response import ClaimMessageResponse
 from .declare_queue_request import DeclareQueueRequest
 from .message import Message
-from .nack_message_request import NackMessageRequest
 from .publish_message_request import PublishMessageRequest
 from .publish_message_response import PublishMessageResponse
+from .requeue_message_request import RequeueMessageRequest
 from .server import Server
 
 __all__ = [
@@ -14,8 +14,8 @@ __all__ = [
     "ClaimMessageResponse",
     "DeclareQueueRequest",
     "Message",
-    "NackMessageRequest",
     "PublishMessageRequest",
     "PublishMessageResponse",
+    "RequeueMessageRequest",
     "Server",
 ]

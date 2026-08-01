@@ -2,6 +2,6 @@ import dataclasses
 
 
 @dataclasses.dataclass
-class NackMessageRequest:
+class RequeueMessageRequest:
     message_id: str
     version: int

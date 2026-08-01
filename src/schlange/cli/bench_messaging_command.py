@@ -69,18 +69,24 @@ class BenchMessagingCommand(Command):
             ) as db:
                 db.migrate(migrations_path=constants.MIGRATIONS_PATH)
                 store = Store(db)
-                store.declare_queue(
-                    QUEUE, None, args.visibility_timeout,
+                store.create_queue(
+                    QUEUE,
+                    None,
+                    5,
                     datetime.datetime.now(datetime.UTC),
                 )
-                pub_time = _publish(store, args.messages, args.payload_size)
+                pub_time = _publish(
+                    store, args.messages, args.payload_size, args.visibility_timeout
+                )
                 results, con_time = _consume(store, args.consumers)
                 _report(args.messages, pub_time, results, con_time, args.consumers)
         finally:
             _cleanup(db_path)
 
 
-def _publish(store: Store, count: int, payload_size: int) -> float:
+def _publish(
+    store: Store, count: int, payload_size: int, visibility_timeout: float
+) -> float:
     payload = b"x" * payload_size
     t0 = time.time()
     for _ in range(count):
@@ -88,14 +94,13 @@ def _publish(store: Store, count: int, payload_size: int) -> float:
             str(uuid.uuid4()),
             QUEUE,
             payload,
+            visibility_timeout,
             datetime.datetime.now(datetime.UTC),
         )
     return time.time() - t0
 
 
-def _consume(
-    store: Store, num_workers: int
-) -> tuple[dict[int, int], float]:
+def _consume(store: Store, num_workers: int) -> tuple[dict[int, int], float]:
     results: dict[int, int] = {}
     threads = [
         threading.Thread(

@@ -5,27 +5,30 @@ from schlange.internal import sqlite
 from schlange.services.messaging import core
 
 SQL_INSERT_QUEUE = """
-    INSERT INTO queues (name, dead_letter_queue, visibility_timeout, created_at)
-    VALUES (:name, :dead_letter_queue, :visibility_timeout, :created_at)
+    INSERT INTO queues (name, dead_letter_queue, max_delivery_count, created_at)
+    VALUES (:name, :dead_letter_queue, :max_delivery_count, :created_at)
 """
 
 SQL_FIND_QUEUE = """
-    SELECT name, dead_letter_queue, visibility_timeout, created_at
+    SELECT name, dead_letter_queue, max_delivery_count, created_at
     FROM queues
     WHERE name = :name
 """
 
 SQL_PUBLISH = """
-    INSERT INTO messages (id, queue, payload, created_at, visible_at, version)
-    VALUES (:id, :queue, :payload, :created_at, :visible_at, :version)
+    INSERT INTO messages
+        (id, queue, payload, visibility_timeout, delivery_count,
+         visible_at, created_at, version)
+    VALUES
+        (:id, :queue, :payload, :visibility_timeout, 0,
+         :created_at, :created_at, 0)
 """
 
 SQL_CLAIM = """
     UPDATE messages
-    SET version = version + 1,
-        visible_at = :now + (
-            SELECT visibility_timeout FROM queues WHERE name = :queue
-        )
+    SET visible_at = :now + messages.visibility_timeout,
+        delivery_count = delivery_count + 1,
+        version = version + 1
     WHERE id = (
         SELECT id
         FROM messages
@@ -33,7 +36,8 @@ SQL_CLAIM = """
         ORDER BY created_at
         LIMIT 1
     )
-    RETURNING id, queue, payload, created_at, version
+    RETURNING id, queue, payload, visibility_timeout, delivery_count,
+              created_at, version
 """
 
 SQL_DELETE_MESSAGE = """
@@ -41,16 +45,25 @@ SQL_DELETE_MESSAGE = """
     WHERE id = :message_id AND version = :version
 """
 
+SQL_REQUEUE = """
+    UPDATE messages
+    SET visible_at = :now,
+        version = version + 1
+    WHERE id = :message_id AND version = :version
+"""
+
 SQL_MOVE_TO_DLQ = """
     UPDATE messages
-    SET queue = :dlq,
+    SET queue = :dlq_queue,
+        delivery_count = 0,
         visible_at = :now,
         version = version + 1
     WHERE id = :message_id AND version = :version
 """
 
 SQL_FIND_MESSAGE = """
-    SELECT id, queue, payload, created_at, version
+    SELECT id, queue, payload, visibility_timeout, delivery_count,
+           created_at, version
     FROM messages
     WHERE id = :id
 """
@@ -62,28 +75,30 @@ class Store:
         self.db = db
         self.dm = sqlite.DataMapper()
 
-    def declare_queue(
+    def create_queue(
         self,
         name: str,
         dead_letter_queue: str | None,
-        visibility_timeout: float,
-        now: datetime.datetime,
+        max_delivery_count: int,
+        created_at: datetime.datetime,
     ) -> None:
-        try:
-            with self.db.transaction() as tx:
+        with self.db.transaction() as tx:
+            try:
                 tx.execute(
                     SQL_INSERT_QUEUE,
                     {
                         "name": name,
                         "dead_letter_queue": dead_letter_queue,
-                        "visibility_timeout": visibility_timeout,
-                        "created_at": self.dm.dump_timestamp(now),
+                        "max_delivery_count": max_delivery_count,
+                        "created_at": self.dm.dump_timestamp(created_at),
                     },
                 )
-        except sqlite3.IntegrityError as e:
-            if e.sqlite_errorname == "SQLITE_CONSTRAINT_PRIMARYKEY":
-                raise core.QueueAlreadyExistsError(name) from None
-            raise core.QueueNotFoundError(dead_letter_queue) from None
+            except sqlite3.IntegrityError as e:
+                if e.sqlite_errorname == "SQLITE_CONSTRAINT_PRIMARYKEY":
+                    raise core.QueueAlreadyExistsError(name) from None
+                if e.sqlite_errorname == "SQLITE_CONSTRAINT_FOREIGNKEY":
+                    raise core.QueueNotFoundError(dead_letter_queue) from None
+                raise
 
     def find_queue(self, name: str) -> core.Queue:
         with self.db.transaction(read_only=True) as tx:
@@ -98,24 +113,26 @@ class Store:
         message_id: str,
         queue: str,
         payload: bytes,
-        now: datetime.datetime,
+        visibility_timeout: float,
+        created_at: datetime.datetime,
     ) -> None:
-        epoch = self.dm.dump_timestamp(now)
-        try:
-            with self.db.transaction() as tx:
+        epoch = self.dm.dump_timestamp(created_at)
+        with self.db.transaction() as tx:
+            try:
                 tx.execute(
                     SQL_PUBLISH,
                     {
                         "id": message_id,
                         "queue": queue,
                         "payload": payload,
+                        "visibility_timeout": visibility_timeout,
                         "created_at": epoch,
-                        "visible_at": epoch,
-                        "version": 0,
                     },
                 )
-        except sqlite3.IntegrityError:
-            raise core.QueueNotFoundError(queue) from None
+            except sqlite3.IntegrityError as e:
+                if e.sqlite_errorname == "SQLITE_CONSTRAINT_FOREIGNKEY":
+                    raise core.QueueNotFoundError(queue) from None
+                raise
 
     def claim_message(
         self,
@@ -142,11 +159,27 @@ class Store:
                 {"message_id": message_id, "version": version},
             )
 
+    def requeue_message(
+        self,
+        message_id: str,
+        version: int,
+        now: datetime.datetime,
+    ) -> None:
+        with self.db.transaction() as tx:
+            tx.execute(
+                SQL_REQUEUE,
+                {
+                    "message_id": message_id,
+                    "version": version,
+                    "now": self.dm.dump_timestamp(now),
+                },
+            )
+
     def move_message_to_dlq(
         self,
         message_id: str,
         version: int,
-        dlq: str,
+        dlq_queue: str,
         now: datetime.datetime,
     ) -> None:
         with self.db.transaction() as tx:
@@ -155,7 +188,7 @@ class Store:
                 {
                     "message_id": message_id,
                     "version": version,
-                    "dlq": dlq,
+                    "dlq_queue": dlq_queue,
                     "now": self.dm.dump_timestamp(now),
                 },
             )
@@ -172,7 +205,7 @@ class Store:
         return core.Queue(
             name=row[0],
             dead_letter_queue=row[1],
-            visibility_timeout=row[2],
+            max_delivery_count=row[2],
             created_at=self.dm.load_timestamp(row[3]),
         )
 
@@ -181,6 +214,8 @@ class Store:
             id=row[0],
             queue=row[1],
             payload=row[2],
-            created_at=self.dm.load_timestamp(row[3]),
-            version=row[4],
+            visibility_timeout=row[3],
+            delivery_count=row[4],
+            created_at=self.dm.load_timestamp(row[5]),
+            version=row[6],
         )

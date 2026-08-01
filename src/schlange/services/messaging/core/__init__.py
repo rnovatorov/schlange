@@ -1,9 +1,9 @@
 from .errors import (
     Error,
+    MessageNotFoundError,
     NoMessagesAvailable,
     QueueAlreadyExistsError,
     QueueNotFoundError,
-    MessageNotFoundError,
 )
 from .message import Message
 from .queue import Queue

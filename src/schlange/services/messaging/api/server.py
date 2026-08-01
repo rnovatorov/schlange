@@ -6,10 +6,6 @@ from schlange.services.messaging import core
 
 @dataclasses.dataclass
 class Server:
-    """
-    Thin public-facing adapter. Wraps a messaging core service,
-    packs core return values into the gRPC-style response dataclasses.
-    """
 
     service: core.Service
 
@@ -17,13 +13,17 @@ class Server:
         self.service.declare_queue(
             name=request.name,
             dead_letter_queue=request.dead_letter_queue,
-            visibility_timeout=request.visibility_timeout,
+            max_delivery_count=request.max_delivery_count,
         )
 
     def publish_message(
         self, request: messaging.PublishMessageRequest
     ) -> messaging.PublishMessageResponse:
-        message_id = self.service.publish_message(request.queue, request.payload)
+        message_id = self.service.publish_message(
+            queue=request.queue,
+            payload=request.payload,
+            visibility_timeout=request.visibility_timeout,
+        )
         return messaging.PublishMessageResponse(message_id=message_id)
 
     def claim_message(
@@ -35,6 +35,8 @@ class Server:
                 id=result.id,
                 queue=result.queue,
                 payload=result.payload,
+                visibility_timeout=result.visibility_timeout,
+                delivery_count=result.delivery_count,
                 version=result.version,
             )
         )
@@ -42,5 +44,5 @@ class Server:
     def ack_message(self, request: messaging.AckMessageRequest) -> None:
         self.service.ack_message(request.message_id, request.version)
 
-    def nack_message(self, request: messaging.NackMessageRequest) -> None:
-        self.service.nack_message(request.message_id, request.version)
+    def requeue_message(self, request: messaging.RequeueMessageRequest) -> None:
+        self.service.requeue_message(request.message_id, request.version)

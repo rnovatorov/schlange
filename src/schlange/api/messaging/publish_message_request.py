@@ -5,3 +5,4 @@ import dataclasses
 class PublishMessageRequest:
     queue: str
     payload: bytes
+    visibility_timeout: float

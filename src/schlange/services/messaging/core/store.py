@@ -17,12 +17,12 @@ class Store(Protocol):
     match.
     """
 
-    def declare_queue(
+    def create_queue(
         self,
         name: str,
         dead_letter_queue: str | None,
-        visibility_timeout: float,
-        now: datetime.datetime,
+        max_delivery_count: int,
+        created_at: datetime.datetime,
     ) -> None: ...
 
     def find_queue(self, name: str) -> Queue: ...
@@ -32,7 +32,8 @@ class Store(Protocol):
         message_id: str,
         queue: str,
         payload: bytes,
-        now: datetime.datetime,
+        visibility_timeout: float,
+        created_at: datetime.datetime,
     ) -> None: ...
 
     def claim_message(
@@ -43,11 +44,18 @@ class Store(Protocol):
 
     def delete_message(self, message_id: str, version: int) -> None: ...
 
+    def requeue_message(
+        self,
+        message_id: str,
+        version: int,
+        now: datetime.datetime,
+    ) -> None: ...
+
     def move_message_to_dlq(
         self,
         message_id: str,
         version: int,
-        dlq: str,
+        dlq_queue: str,
         now: datetime.datetime,
     ) -> None: ...
 
