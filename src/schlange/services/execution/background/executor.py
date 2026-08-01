@@ -20,9 +20,13 @@ class Executor(background.Worker):
         self.executing_tasks: Set[str] = set()
         self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=threads)
 
-    def stop(self) -> None:
-        self.thread_pool.shutdown(wait=True, cancel_futures=True)
-        super().stop()
+    def cancel(self) -> None:
+        super().cancel()
+        self.thread_pool.shutdown(wait=False, cancel_futures=True)
+
+    def wait(self) -> None:
+        self.thread_pool.shutdown(wait=True)
+        super().wait()
 
     def work(self) -> None:
         while True:

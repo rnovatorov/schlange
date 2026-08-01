@@ -86,12 +86,24 @@ class Schlange:
         self.leases_reaper.start()
 
     def stop(self) -> None:
-        self.cleanup_worker.stop()
-        self.dispatcher.stop()
-        self.executor.stop()
-        self.schedule_worker.stop()
-        self.messaging_sweeper.stop()
-        self.leases_reaper.stop()
+        workers = [
+            self.cleanup_worker,
+            self.dispatcher,
+            self.executor,
+            self.schedule_worker,
+            self.messaging_sweeper,
+            self.leases_reaper,
+        ]
+        for w in workers:
+            w.cancel()
+        errors = []
+        for w in workers:
+            try:
+                w.wait()
+            except Exception as e:
+                errors.append(e)
+        if len(errors) > 0:
+            raise ExceptionGroup("Schlange.stop", errors)
 
     @classmethod
     @contextlib.contextmanager
