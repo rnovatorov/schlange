@@ -40,7 +40,11 @@ class Database:
     @classmethod
     @contextlib.contextmanager
     def open(
-        cls, path: pathlib.Path, read_pool_capacity: int
+        cls,
+        path: pathlib.Path,
+        read_pool_capacity: int,
+        write_pool_capacity: int = 1,
+        sync_write_pool_capacity: int = 1,
     ) -> Generator["Database", None, None]:
         with contextlib.ExitStack() as stack:
             read_pool = stack.enter_context(
@@ -54,14 +58,14 @@ class Database:
                 ConnectionPool.new(
                     path=path,
                     synchronous_full=False,
-                    capacity=1,
+                    capacity=write_pool_capacity,
                 )
             )
             sync_write_pool = stack.enter_context(
                 ConnectionPool.new(
                     path=path,
                     synchronous_full=True,
-                    capacity=1,
+                    capacity=sync_write_pool_capacity,
                 )
             )
             yield cls(

@@ -63,7 +63,9 @@ class BenchMessagingCommand(Command):
         db_path = args.db_path or pathlib.Path(tempfile.mktemp(suffix=".db", dir="."))
         try:
             with sqlite.Database.open(
-                path=db_path, read_pool_capacity=max(args.consumers + 1, 4)
+                path=db_path,
+                read_pool_capacity=max(args.consumers + 1, 4),
+                write_pool_capacity=args.consumers,
             ) as db:
                 db.migrate(migrations_path=constants.MIGRATIONS_PATH)
                 store = Store(db)
@@ -124,8 +126,8 @@ def _consume_worker(
             )
         except core.NoMessagesAvailable:
             break
-        count += 1
         store.delete_message(msg.id, msg.version)
+        count += 1
     results[worker_id] = count
 
 
