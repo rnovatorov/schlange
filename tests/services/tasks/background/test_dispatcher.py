@@ -19,6 +19,7 @@ def _task(task_id):
         retry_policy=internal_core.RetryPolicy(
             initial_delay=1, backoff_factor=2, max_delay=None, max_attempts=3
         ),
+        visibility_timeout=30.0,
         schedule_id=None,
     )
 

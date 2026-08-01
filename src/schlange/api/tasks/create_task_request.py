@@ -10,5 +10,6 @@ class CreateTaskRequest:
     args: dict
     delay: float
     retry_policy: RetryPolicy
+    visibility_timeout: float
     id: Optional[str] = None
     schedule_id: Optional[str] = None

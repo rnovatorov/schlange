@@ -24,6 +24,7 @@ class Task(internal_core.Aggregate):
     args: internal_core.DTO
     ready_at: datetime.datetime
     retry_policy: internal_core.RetryPolicy
+    visibility_timeout: float
     executions: List[TaskExecution]
     schedule_id: Optional[str]
 
@@ -36,6 +37,7 @@ class Task(internal_core.Aggregate):
         args: internal_core.DTO,
         delay: float,
         retry_policy: internal_core.RetryPolicy,
+        visibility_timeout: float,
         schedule_id: Optional[str],
     ) -> "Task":
         return cls(
@@ -47,6 +49,7 @@ class Task(internal_core.Aggregate):
             args=args,
             ready_at=now + datetime.timedelta(seconds=delay),
             retry_policy=retry_policy,
+            visibility_timeout=visibility_timeout,
             executions=[],
             schedule_id=schedule_id,
         )

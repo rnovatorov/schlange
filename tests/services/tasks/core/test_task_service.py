@@ -73,6 +73,7 @@ class TaskServiceDispatchTest(unittest.TestCase):
             args={"key": "value"},
             kind="test_kind",
             delay=0,
+            visibility_timeout=30.0,
             retry_policy=_retry_policy(),
         )
         defaults.update(overrides)
@@ -123,6 +124,7 @@ class TaskServiceDispatchTest(unittest.TestCase):
         self.assertEqual(request.task_id, task.id)
         self.assertEqual(request.seq_num, 0)
         self.assertEqual(request.args, {"a": 1})
+        self.assertEqual(request.visibility_timeout, task.visibility_timeout)
 
     def test_begin_execution_uses_seq_num_per_task(self):
         task = self._create_task(

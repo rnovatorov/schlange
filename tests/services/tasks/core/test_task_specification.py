@@ -26,6 +26,7 @@ def _create_task(**overrides):
         args={},
         delay=0,
         retry_policy=_retry_policy(),
+        visibility_timeout=30.0,
         schedule_id=None,
     )
     defaults.update(overrides)

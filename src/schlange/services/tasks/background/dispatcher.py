@@ -24,9 +24,6 @@ class Dispatcher(background.Worker):
         self.ttl = ttl
 
     def work(self) -> None:
-        self.dispatch_tasks()
-
-    def dispatch_tasks(self) -> None:
         if not self.service.acquire_lease(self.key, self.holder, self.ttl):
             return
         for task in self.service.executable_tasks():

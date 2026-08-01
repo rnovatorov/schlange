@@ -10,3 +10,4 @@ class Task:
     kind: str
     args: Dict[str, Any]
     state: TaskState
+    visibility_timeout: float

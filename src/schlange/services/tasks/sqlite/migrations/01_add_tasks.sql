@@ -10,7 +10,8 @@ CREATE TABLE tasks (
     last_execution_ended_at REAL,
     execution_in_progress INTEGER NOT NULL,
     schedule_id TEXT,
-    kind TEXT NOT NULL
+    kind TEXT NOT NULL,
+    visibility_timeout REAL NOT NULL
 );
 
 CREATE UNIQUE INDEX idx_schedule_id_where_active ON tasks (schedule_id)

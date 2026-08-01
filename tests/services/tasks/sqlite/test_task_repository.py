@@ -45,6 +45,7 @@ class TaskRepositoryExecutionInProgressTest(unittest.TestCase):
             args={},
             delay=delay,
             retry_policy=_retry_policy(),
+            visibility_timeout=30.0,
             schedule_id=None,
         )
         self.repository.create_task(task)

@@ -12,6 +12,7 @@ class TaskExecutionRequest:
     seq_num: int
     kind: str
     args: internal_core.DTO
+    visibility_timeout: float
 
 
 class MessageQueue(Protocol):

@@ -26,6 +26,7 @@ class TaskService:
         args: internal_core.DTO,
         kind: str,
         delay: float,
+        visibility_timeout: float,
         retry_policy: internal_core.RetryPolicy,
         id: Optional[str] = None,
         schedule_id: Optional[str] = None,
@@ -43,6 +44,7 @@ class TaskService:
             args=args,
             delay=delay,
             retry_policy=retry_policy,
+            visibility_timeout=visibility_timeout,
             schedule_id=schedule_id,
         )
         self.task_repository.create_task(task)
@@ -92,6 +94,7 @@ class TaskService:
                 seq_num=execution.seq_num,
                 kind=task.kind,
                 args=task.args,
+                visibility_timeout=task.visibility_timeout,
             )
         )
         self.task_repository.update_task(task, synchronous=False)
@@ -152,9 +155,6 @@ class TaskService:
     def acquire_lease(self, key: str, holder: str, ttl: float) -> bool:
         """Acquire or renew a lease via the lease service port."""
         return self.lease_service.acquire_lease(key=key, holder=holder, ttl=ttl)
-
-    def execute_task(self, task_id: str) -> Task:
-        raise NotImplementedError("Executor rewrite pending")
 
     def _now(self) -> datetime.datetime:
         return datetime.datetime.now(datetime.UTC)

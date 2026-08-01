@@ -9,22 +9,23 @@ from .data_mapper import DataMapper
 
 SQL_CREATE_TASK = """
     INSERT INTO tasks (id, version, created_at, args, state, ready_at, retry_policy,
-        executions, last_execution_ended_at, execution_in_progress, schedule_id, kind)
+        executions, last_execution_ended_at, execution_in_progress, schedule_id, kind,
+        visibility_timeout)
     VALUES (:id, :version, :created_at, :args, :state, :ready_at, :retry_policy,
         :executions, :last_execution_ended_at, :execution_in_progress,
-        :schedule_id, :kind)
+        :schedule_id, :kind, :visibility_timeout)
 """
 
 SQL_GET_TASK_BY_ID = """
     SELECT id, version, created_at, args, state, ready_at, retry_policy, executions,
-        schedule_id, kind
+        schedule_id, kind, visibility_timeout
     FROM tasks
     WHERE id = :id
 """
 
 SQL_GET_TASKS_BY_SPEC = """
     SELECT id, version, created_at, args, state, ready_at, retry_policy, executions,
-        schedule_id, kind
+        schedule_id, kind, visibility_timeout
     FROM tasks
     WHERE
         coalesce(state = :state, true) AND
@@ -53,7 +54,8 @@ SQL_UPDATE_TASK_BY_ID = """
         last_execution_ended_at = :last_execution_ended_at,
         execution_in_progress = :execution_in_progress,
         schedule_id = :schedule_id,
-        kind = :kind
+        kind = :kind,
+        visibility_timeout = :visibility_timeout
     WHERE id = :id AND version = :version
 """
 
@@ -101,6 +103,7 @@ class TaskRepository:
                         ),
                         "schedule_id": task.schedule_id,
                         "kind": task.kind,
+                        "visibility_timeout": task.visibility_timeout,
                     },
                 )
             except sqlite3.IntegrityError:
@@ -150,6 +153,7 @@ class TaskRepository:
             state=self.data_mapper.load_task_state(row[4]),
             ready_at=self.data_mapper.load_timestamp(row[5]),
             retry_policy=self.data_mapper.load_retry_policy(json.loads(row[6])),
+            visibility_timeout=row[10],
             executions=[
                 self.data_mapper.load_task_execution(dto) for dto in json.loads(row[7])
             ],
@@ -197,6 +201,7 @@ class TaskRepository:
                     ),
                     "schedule_id": task.schedule_id,
                     "kind": task.kind,
+                    "visibility_timeout": task.visibility_timeout,
                 },
             )
             if not rows_affected:
