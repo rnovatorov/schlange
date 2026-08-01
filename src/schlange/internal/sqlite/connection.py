@@ -17,6 +17,7 @@ class Connection:
         try:
             # See: https://www.sqlite.org/pragma.html#pragma_journal_mode
             conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA foreign_keys = ON")
             # See: https://www.sqlite.org/pragma.html#pragma_synchronous
             if not synchronous_full:
                 conn.execute("PRAGMA synchronous = NORMAL")
