@@ -121,12 +121,14 @@ class TaskRepository:
                 {
                     "state": spec.state.value if spec.state is not None else None,
                     "ready_as_of": (
-                        spec.ready_as_of.isoformat()
+                        self.data_mapper.dump_timestamp(spec.ready_as_of)
                         if spec.ready_as_of is not None
                         else None
                     ),
                     "last_execution_ended_before": (
-                        spec.last_execution_ended_before.isoformat()
+                        self.data_mapper.dump_timestamp(
+                            spec.last_execution_ended_before
+                        )
                         if spec.last_execution_ended_before is not None
                         else None
                     ),

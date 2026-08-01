@@ -115,7 +115,7 @@ class ScheduleRepository:
                 {
                     "enabled": int(spec.enabled) if spec.enabled is not None else None,
                     "ready_as_of": (
-                        spec.ready_as_of.isoformat()
+                        self.data_mapper.dump_timestamp(spec.ready_as_of)
                         if spec.ready_as_of is not None
                         else None
                     ),

@@ -1,13 +1,13 @@
 CREATE TABLE tasks (
     id TEXT PRIMARY KEY,
     version INTEGER NOT NULL,
-    created_at TEXT NOT NULL,
+    created_at REAL NOT NULL,
     args TEXT NOT NULL,
     state TEXT NOT NULL,
-    ready_at TEXT NOT NULL,
+    ready_at REAL NOT NULL,
     retry_policy TEXT NOT NULL,
     executions TEXT NOT NULL,
-    last_execution_ended_at TEXT,
+    last_execution_ended_at REAL,
     execution_in_progress INTEGER NOT NULL,
     schedule_id TEXT,
     kind TEXT NOT NULL

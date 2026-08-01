@@ -1,9 +1,9 @@
 CREATE TABLE schedules (
     id TEXT PRIMARY KEY,
     version INT NOT NULL,
-    created_at TEXT NOT NULL,
-    ready_at TEXT NOT NULL,
-    origin TEXT NOT NULL,
+    created_at REAL NOT NULL,
+    ready_at REAL NOT NULL,
+    origin REAL NOT NULL,
     interval REAL NOT NULL,
     retry_policy TEXT NOT NULL,
     enabled INT NOT NULL,

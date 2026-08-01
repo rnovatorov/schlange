@@ -5,11 +5,11 @@ from schlange.internal import core
 
 class DataMapper:
 
-    def dump_timestamp(self, timestamp: datetime.datetime) -> str:
-        return timestamp.isoformat()
+    def dump_timestamp(self, timestamp: datetime.datetime) -> float:
+        return timestamp.timestamp()
 
-    def load_timestamp(self, s: str) -> datetime.datetime:
-        return datetime.datetime.fromisoformat(s)
+    def load_timestamp(self, s: float) -> datetime.datetime:
+        return datetime.datetime.fromtimestamp(s, tz=datetime.UTC)
 
     def dump_retry_policy(self, policy: core.RetryPolicy) -> core.DTO:
         return {

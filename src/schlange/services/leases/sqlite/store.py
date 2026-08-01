@@ -6,15 +6,16 @@ from schlange.internal import sqlite
 # Atomic acquire: INSERT if free, else take over the row when it is held
 # by the same holder OR has expired. RETURNING yields the new expires_at
 # when the row is inserted/updated; no row means a live conflict.
+# Timestamps are stored as Unix epoch (REAL) seconds, so expiry is
+# computed as now + ttl via plain arithmetic.
 SQL_ACQUIRE = """
     INSERT INTO leases (key, holder, ttl, expires_at)
-    VALUES (:key, :holder, :ttl,
-            datetime(:now, '+' || CAST(:ttl AS INTEGER) || ' seconds'))
+    VALUES (:key, :holder, :ttl, :now + :ttl)
     ON CONFLICT(key) DO UPDATE
     SET holder = :holder,
         ttl = :ttl,
-        expires_at = datetime(:now, '+' || CAST(:ttl AS INTEGER) || ' seconds')
-    WHERE leases.holder = :holder OR leases.expires_at <= datetime(:now)
+        expires_at = :now + :ttl
+    WHERE leases.holder = :holder OR leases.expires_at <= :now
     RETURNING expires_at
 """
 
@@ -24,8 +25,8 @@ SQL_ACQUIRE = """
 # expired.
 SQL_REFRESH = """
     UPDATE leases
-    SET expires_at = datetime(:now, '+' || CAST(ttl AS INTEGER) || ' seconds')
-    WHERE key = :key AND holder = :holder AND expires_at > datetime(:now)
+    SET expires_at = :now + ttl
+    WHERE key = :key AND holder = :holder AND expires_at > :now
     RETURNING expires_at
 """
 
@@ -37,12 +38,12 @@ SQL_RELEASE = """
 SQL_IS_HOLDER = """
     SELECT 1
     FROM leases
-    WHERE key = :key AND holder = :holder AND expires_at > datetime(:now)
+    WHERE key = :key AND holder = :holder AND expires_at > :now
 """
 
 SQL_DELETE_EXPIRED = """
     DELETE FROM leases
-    WHERE expires_at <= datetime(:now)
+    WHERE expires_at <= :now
 """
 
 
