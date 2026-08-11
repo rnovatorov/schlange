@@ -14,7 +14,7 @@ class StoreTest(unittest.TestCase):
         db_path = pathlib.Path(self.dir.name) / "leases.db"
         self.db_ctx = sqlite.Database.open(db_path, read_pool_capacity=4)
         self.db = self.db_ctx.__enter__()
-        self.db.migrate(migrations_path=leases_sqlite.MIGRATIONS_PATH)
+        self.db.migrate(migrations=leases_sqlite.MIGRATIONS)
         self.store = leases_sqlite.Store(self.db)
 
     def tearDown(self):

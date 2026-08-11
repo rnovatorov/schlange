@@ -148,10 +148,10 @@ class Schlange:
             write_pool_capacity=write_pool_capacity,
             sync_write_pool_capacity=write_pool_capacity,
         ) as messaging_db:
-            task_db.migrate(migrations_path=tasks_sqlite.MIGRATIONS_PATH)
-            schedule_db.migrate(migrations_path=schedules_sqlite.MIGRATIONS_PATH)
-            lease_db.migrate(migrations_path=leases_sqlite.MIGRATIONS_PATH)
-            messaging_db.migrate(migrations_path=messaging_sqlite.MIGRATIONS_PATH)
+            task_db.migrate(migrations=tasks_sqlite.MIGRATIONS)
+            schedule_db.migrate(migrations=schedules_sqlite.MIGRATIONS)
+            lease_db.migrate(migrations=leases_sqlite.MIGRATIONS)
+            messaging_db.migrate(migrations=messaging_sqlite.MIGRATIONS)
             task_repository = tasks_sqlite.TaskRepository(db=task_db)
             lease_store = leases_sqlite.Store(db=lease_db)
             messaging_store = messaging_sqlite.Store(db=messaging_db)

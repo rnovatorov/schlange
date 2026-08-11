@@ -24,24 +24,6 @@ class Transaction:
         else:
             conn.commit()
 
-    @classmethod
-    @contextlib.contextmanager
-    def begin_with_script(
-        cls, conn: sqlite3.Connection, script: str
-    ) -> Generator["Transaction", None, None]:
-        # NOTE: `sqlite3.Cursor.executescript` makes an implicit COMMIT before
-        # executing the script if the autocommit is LEGACY_TRANSACTION_CONTROL
-        # and there is a pending transaction. Fortunately it does not
-        # implicitly COMMIT after executing the script so we can start a
-        # transaction inside the script and ensure we atomically execute it and
-        # do whatever else is needed later in the same transaction.
-        #
-        # See:
-        # - https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.executescript
-        with cls.begin(conn=conn, read_only=False) as tx:
-            tx.cursor.executescript("BEGIN IMMEDIATE; " + script)
-            yield tx
-
     def __init__(self, cursor: sqlite3.Cursor) -> None:
         self.cursor = cursor
 

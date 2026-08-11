@@ -16,7 +16,7 @@ class StoreTest(unittest.TestCase):
         db_path = pathlib.Path(self.dir.name) / "messaging.db"
         self.db_ctx = sqlite.Database.open(db_path, read_pool_capacity=4)
         self.db = self.db_ctx.__enter__()
-        self.db.migrate(migrations_path=messaging_sqlite.MIGRATIONS_PATH)
+        self.db.migrate(migrations=messaging_sqlite.MIGRATIONS)
         self.store = messaging_sqlite.Store(self.db)
         self.now = self._now()
         self.store.create_queue("orders", None, 5, self.now)

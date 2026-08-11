@@ -30,6 +30,3 @@ class Connection:
 
     def transaction(self, read_only: bool = False) -> ContextManager[Transaction]:
         return Transaction.begin(conn=self.conn, read_only=read_only)
-
-    def transaction_with_script(self, script: str) -> ContextManager[Transaction]:
-        return Transaction.begin_with_script(conn=self.conn, script=script)

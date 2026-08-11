@@ -30,7 +30,7 @@ class TaskRepositoryExecutionInProgressTest(unittest.TestCase):
         db_path = pathlib.Path(self.dir.name) / "tasks.db"
         self.db_ctx = sqlite.Database.open(db_path, read_pool_capacity=4)
         self.db = self.db_ctx.__enter__()
-        self.db.migrate(migrations_path=tasks_sqlite.MIGRATIONS_PATH)
+        self.db.migrate(migrations=tasks_sqlite.MIGRATIONS)
         self.repository = tasks_sqlite.TaskRepository(self.db)
 
     def tearDown(self):

@@ -8,7 +8,7 @@ import uuid
 
 from schlange.internal import sqlite
 from schlange.services.messaging import core
-from schlange.services.messaging.sqlite import constants
+from schlange.services.messaging.sqlite import migrations as messaging_migrations
 from schlange.services.messaging.sqlite.store import Store
 
 from .command import Command
@@ -67,7 +67,7 @@ class BenchMessagingCommand(Command):
                 read_pool_capacity=max(args.consumers + 1, 4),
                 write_pool_capacity=args.consumers,
             ) as db:
-                db.migrate(migrations_path=constants.MIGRATIONS_PATH)
+                db.migrate(migrations=messaging_migrations.MIGRATIONS)
                 store = Store(db)
                 store.create_queue(
                     QUEUE,

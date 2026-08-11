@@ -1,9 +1,9 @@
-from .constants import MIGRATIONS_PATH
 from .data_mapper import DataMapper
+from .migrations import MIGRATIONS
 from .task_repository import TaskRepository
 
 __all__ = [
     "DataMapper",
-    "MIGRATIONS_PATH",
+    "MIGRATIONS",
     "TaskRepository",
 ]

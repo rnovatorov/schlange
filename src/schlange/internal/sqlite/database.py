@@ -1,11 +1,11 @@
 import contextlib
 import logging
 import pathlib
-import sqlite3
 from typing import Generator
 
 from .connection import Connection
 from .connection_pool import ConnectionPool
+from .migration import Migration
 from .transaction import Transaction
 
 LOGGER = logging.getLogger(__name__)
@@ -97,34 +97,35 @@ class Database:
             with conn.transaction(read_only=read_only) as tx:
                 yield tx
 
-    def migrate(self, migrations_path: pathlib.Path) -> None:
+    def migrate(self, migrations: list[Migration]) -> None:
         with self.write_pool.acquire() as conn:
-            self._migrate(conn, migrations_path)
+            self._migrate(conn, migrations)
 
-    def _migrate(self, conn: Connection, migrations_path: pathlib.Path) -> None:
+    def _migrate(self, conn: Connection, migrations: list[Migration]) -> None:
+        self._ensure_schema_version_table(conn)
+        for version, migration in enumerate(migrations, start=1):
+            self._apply_migration(conn, migration, version)
+
+    def _ensure_schema_version_table(self, conn: Connection) -> None:
         with conn.transaction() as tx:
             tx.execute(SQL_CREATE_SCHEMA_VERSION_TABLE)
             tx.execute(SQL_SET_DEFAULT_SCHEMA_VERSION)
-            schema_version = tx.query_row(SQL_SELECT_CURRENT_SCHEMA_VERSION)[0]
 
-        scripts = []
-        for path in migrations_path.glob("*_*.sql"):
-            version = int(path.name.split("_", maxsplit=1)[0])
-            if version > schema_version:
-                scripts.append((version, path))
-        scripts.sort(key=lambda version_and_path: version_and_path[0])
-
-        for version, path in scripts:
-            try:
-                self._execute_migration_script(conn, version, path)
-                LOGGER.info("migrated database to version %d", version)
-            except sqlite3.Error:
-                LOGGER.error("failed to migrate database to version %d", version)
-                raise
-
-    def _execute_migration_script(
-        self, conn: Connection, version: int, path: pathlib.Path
+    def _apply_migration(
+        self, conn: Connection, migration: Migration, version: int
     ) -> None:
-        script = path.read_text()
-        with conn.transaction_with_script(script) as tx:
+        # Re-check the version under the write lock: another process may
+        # have applied this migration while we waited for it. The check,
+        # the body, and the version bump share one transaction, so the body
+        # runs at most once even under concurrent cold starts. This relies
+        # on statements being issued one at a time via execute() -- never
+        # executescript(), which implicitly commits the surrounding
+        # transaction and would break the atomicity of the check-then-act.
+        with conn.transaction() as tx:
+            current = tx.query_row(SQL_SELECT_CURRENT_SCHEMA_VERSION)[0]
+            if current >= version:
+                return
+            for statement in migration.statements:
+                tx.execute(statement)
             tx.execute(SQL_UPDATE_CURRENT_SCHEMA_VERSION, {"version": version})
+            LOGGER.info("migrated database to version %d", version)
