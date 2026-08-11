@@ -22,7 +22,7 @@ Execution is the exception: it has no persistence — core service plus consumer
 
 ```
 src/schlange/
-├── api/<service>/       # public contracts (Protocols + request/response dataclasses)
+├── api/<service>/       # public contracts (Protocols, request/response dataclasses, errors)
 ├── services/<service>/
 │   ├── api/             # thin adapter, wraps core, satisfies Protocols from schlange/api/
 │   ├── core/            # stateless business logic
@@ -37,7 +37,7 @@ src/schlange/
 
 Contracts are defined in `schlange/api/<service>/` (currently: tasks, messaging, leases). The service's adapter (e.g. `services/leases/api/server.py`) satisfies them structurally; it does not import or inherit them. Contracts are written lazily — only when there's actual cross-service consumption to drive them, not speculatively for symmetry.
 
-Cross-service consumption goes through driving adapters on the consumer side: tasks adapts messaging (`services/tasks/api/message_queue.py`) and leases (`services/tasks/api/lease_service.py`) to its core ports; execution adapts tasks (`services/execution/api/task_service.py`). Driving adapters may import both the contract and the providing service's errors.
+Cross-service consumption goes through driving adapters on the consumer side: tasks adapts messaging (`services/tasks/api/message_queue.py`) and leases (`services/tasks/api/lease_service.py`) to its core ports; execution adapts tasks (`services/execution/api/task_service.py`). Driving adapters import only the public contract — the errors a Server raises are part of that contract (`api/<service>/errors.py`), not the provider's private package.
 
 ## Data
 

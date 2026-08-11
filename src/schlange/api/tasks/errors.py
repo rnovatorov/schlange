@@ -2,6 +2,10 @@ class Error(Exception):
     pass
 
 
+class AlreadyExistsError(Error):
+    pass
+
+
 class ConflictError(Error):
     pass
 

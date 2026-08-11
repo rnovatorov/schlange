@@ -2,6 +2,13 @@ from .create_task_request import CreateTaskRequest
 from .create_task_response import CreateTaskResponse
 from .delete_task_request import DeleteTaskRequest
 from .end_execution_request import EndExecutionRequest
+from .errors import (
+    AlreadyExistsError,
+    ConflictError,
+    Error,
+    FailedPreconditionError,
+    NotFoundError,
+)
 from .get_task_request import GetTaskRequest
 from .get_task_response import GetTaskResponse
 from .list_tasks_request import ListTasksRequest
@@ -14,14 +21,19 @@ from .task import Task
 from .task_state import TaskState
 
 __all__ = [
+    "AlreadyExistsError",
+    "ConflictError",
     "CreateTaskRequest",
     "CreateTaskResponse",
     "DeleteTaskRequest",
     "EndExecutionRequest",
+    "Error",
+    "FailedPreconditionError",
     "GetTaskRequest",
     "GetTaskResponse",
     "ListTasksRequest",
     "ListTasksResponse",
+    "NotFoundError",
     "ReactivateTaskRequest",
     "ReactivateTaskResponse",
     "RetryPolicy",

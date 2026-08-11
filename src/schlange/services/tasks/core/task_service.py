@@ -34,6 +34,7 @@ class TaskService:
         """
         Raises:
             IOError: IO error occurred during the operation.
+            TaskAlreadyExistsError: A task with the same id already exists.
         """
         if id is None:
             id = str(uuid.uuid4())

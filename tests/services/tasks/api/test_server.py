@@ -80,6 +80,19 @@ class TaskServerTest(unittest.TestCase):
             {"id", "kind", "args", "state", "visibility_timeout"},
         )
 
+    def test_create_task_with_duplicate_id_raises_already_exists(self):
+        request = tasks_api.CreateTaskRequest(
+            kind="test_kind",
+            args={"key": "value"},
+            delay=0,
+            retry_policy=_retry_policy(),
+            visibility_timeout=30.0,
+            id="fixed-id",
+        )
+        self.server.create_task(request)
+        with self.assertRaises(tasks_api.AlreadyExistsError):
+            self.server.create_task(request)
+
     def test_get_task(self):
         created = self.server.create_task(
             tasks_api.CreateTaskRequest(
@@ -124,7 +137,7 @@ class TaskServerTest(unittest.TestCase):
             )
         )
         self.server.delete_task(tasks_api.DeleteTaskRequest(id=created.task.id))
-        with self.assertRaises(tasks_api_service.NotFoundError):
+        with self.assertRaises(tasks_api.NotFoundError):
             self.server.get_task(tasks_api.GetTaskRequest(id=created.task.id))
 
     def test_end_execution_success(self):
@@ -237,7 +250,7 @@ class TaskServerTest(unittest.TestCase):
                 visibility_timeout=30.0,
             )
         )
-        with self.assertRaises(tasks_api_service.FailedPreconditionError):
+        with self.assertRaises(tasks_api.FailedPreconditionError):
             self.server.end_execution(
                 tasks_api.EndExecutionRequest(
                     task_id=created.task.id,
@@ -358,11 +371,11 @@ class TaskServerTest(unittest.TestCase):
 
     def test_unknown_task_id_raises_not_found(self):
         unknown_id = "nonexistent-task-id"
-        with self.assertRaises(tasks_api_service.NotFoundError):
+        with self.assertRaises(tasks_api.NotFoundError):
             self.server.get_task(tasks_api.GetTaskRequest(id=unknown_id))
-        with self.assertRaises(tasks_api_service.NotFoundError):
+        with self.assertRaises(tasks_api.NotFoundError):
             self.server.delete_task(tasks_api.DeleteTaskRequest(id=unknown_id))
-        with self.assertRaises(tasks_api_service.NotFoundError):
+        with self.assertRaises(tasks_api.NotFoundError):
             self.server.end_execution(
                 tasks_api.EndExecutionRequest(
                     task_id=unknown_id,

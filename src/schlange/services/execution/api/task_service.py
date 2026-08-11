@@ -1,18 +1,13 @@
 import typing
 
-from schlange.api import tasks as tasks_api
+from schlange.api import tasks
 from schlange.services.execution import core
-from schlange.services.tasks.api.errors import (
-    ConflictError,
-    FailedPreconditionError,
-    NotFoundError,
-)
 
 
 class TaskServiceAdapter:
     """Adapts tasks API to execution core TaskServicePort."""
 
-    def __init__(self, task_server: tasks_api.Server) -> None:
+    def __init__(self, task_server: tasks.Server) -> None:
         self.task_server = task_server
 
     def end_execution(
@@ -20,15 +15,15 @@ class TaskServiceAdapter:
     ) -> None:
         try:
             self.task_server.end_execution(
-                tasks_api.EndExecutionRequest(
+                tasks.EndExecutionRequest(
                     task_id=task_id,
                     seq_num=seq_num,
                     error=error,
                 )
             )
-        except ConflictError:
+        except tasks.ConflictError:
             raise core.AbortedError() from None
-        except NotFoundError:
+        except tasks.NotFoundError:
             raise core.NotFoundError() from None
-        except FailedPreconditionError:
+        except tasks.FailedPreconditionError:
             raise core.FailedPreconditionError() from None
