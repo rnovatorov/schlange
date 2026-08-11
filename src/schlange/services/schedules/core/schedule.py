@@ -4,7 +4,6 @@ import uuid
 from typing import List, Optional
 
 from schlange.internal import core as internal_core
-from schlange.services.tasks import core as tasks_core
 
 from .errors import (
     ScheduleFiringNotBegunYetError,
@@ -22,11 +21,11 @@ class Schedule(internal_core.Aggregate):
     ready_at: datetime.datetime
     origin: datetime.datetime
     interval: float
-    retry_policy: tasks_core.RetryPolicy
+    retry_policy: internal_core.RetryPolicy
     enabled: bool
     task_args: internal_core.DTO
     task_kind: str
-    task_retry_policy: tasks_core.RetryPolicy
+    task_retry_policy: internal_core.RetryPolicy
     task_sequence_number: int
     firings: List[ScheduleFiring]
 
@@ -37,11 +36,11 @@ class Schedule(internal_core.Aggregate):
         id: str,
         delay: float,
         interval: float,
-        retry_policy: tasks_core.RetryPolicy,
+        retry_policy: internal_core.RetryPolicy,
         enabled: bool,
         task_args: internal_core.DTO,
         task_kind: str,
-        task_retry_policy: tasks_core.RetryPolicy,
+        task_retry_policy: internal_core.RetryPolicy,
     ) -> "Schedule":
         origin = now + datetime.timedelta(seconds=delay)
         return cls(
@@ -97,7 +96,7 @@ class Schedule(internal_core.Aggregate):
                 if retry_at < self._next_firing_at():
                     self.ready_at = retry_at
                     return
-            except tasks_core.TooManyAttemptsError:
+            except internal_core.TooManyAttemptsError:
                 pass
         self.task_sequence_number += 1
         self.origin += datetime.timedelta(seconds=self.interval)

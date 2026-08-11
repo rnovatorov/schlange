@@ -16,6 +16,7 @@ from schlange.services.leases import sqlite as leases_sqlite
 from schlange.services.messaging import api as messaging_api
 from schlange.services.messaging import core as messaging_core
 from schlange.services.messaging import sqlite as messaging_sqlite
+from schlange.services.schedules import api as schedules_api
 from schlange.services.schedules import background as schedules_background
 from schlange.services.schedules import core as schedules_core
 from schlange.services.schedules import sqlite as schedules_sqlite
@@ -168,13 +169,16 @@ class Schlange:
                 message_queue=message_queue,
                 lease_service=task_lease_service,
             )
+            task_server = tasks_api.Server(service=task_service)
             schedule_repository = schedules_sqlite.ScheduleRepository(db=schedule_db)
+            schedule_task_service = schedules_api.TaskServiceAdapter(
+                task_server=task_server,
+            )
             schedule_service = schedules_core.ScheduleService(
                 schedule_repository=schedule_repository,
-                task_service=task_service,
+                task_service=schedule_task_service,
                 task_visibility_timeout=default_visibility_timeout,
             )
-            task_server = tasks_api.Server(service=task_service)
             task_service_adapter = execution_api.TaskServiceAdapter(
                 task_server=task_server,
             )

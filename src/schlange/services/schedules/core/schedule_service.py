@@ -5,29 +5,29 @@ import uuid
 from typing import List, Optional
 
 from schlange.internal import core as internal_core
-from schlange.services.tasks import core as tasks_core
 
 from .schedule import Schedule
 from .schedule_repository import ScheduleRepository
 from .schedule_specification import ScheduleSpecification
+from .task_service import TaskServicePort
 
 
 @dataclasses.dataclass
 class ScheduleService:
 
     schedule_repository: ScheduleRepository
-    task_service: tasks_core.TaskService
+    task_service: TaskServicePort
     task_visibility_timeout: float
 
     def create_schedule(
         self,
         delay: float,
         interval: float,
-        retry_policy: tasks_core.RetryPolicy,
+        retry_policy: internal_core.RetryPolicy,
         enabled: bool,
         task_args: internal_core.DTO,
         task_kind: str,
-        task_retry_policy: tasks_core.RetryPolicy,
+        task_retry_policy: internal_core.RetryPolicy,
         id: Optional[str] = None,
     ) -> Schedule:
         if id is None:
@@ -62,7 +62,7 @@ class ScheduleService:
         schedule.begin_firing(now=self._now())
         error: Optional[str] = None
         try:
-            _ = self.task_service.create_task(
+            self.task_service.create_task(
                 id=schedule.generate_task_id(),
                 args=schedule.task_args,
                 kind=schedule.task_kind,
@@ -71,8 +71,6 @@ class ScheduleService:
                 retry_policy=schedule.task_retry_policy,
                 schedule_id=schedule_id,
             )
-        except tasks_core.TaskAlreadyExistsError:
-            pass
         except Exception:
             error = traceback.format_exc()
         schedule.end_firing(now=self._now(), error=error)

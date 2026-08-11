@@ -37,7 +37,7 @@ src/schlange/
 
 Contracts are defined in `schlange/api/<service>/` (currently: tasks, messaging, leases). The service's adapter (e.g. `services/leases/api/server.py`) satisfies them structurally; it does not import or inherit them. Contracts are written lazily — only when there's actual cross-service consumption to drive them, not speculatively for symmetry.
 
-Cross-service consumption goes through driving adapters on the consumer side: tasks adapts messaging (`services/tasks/api/message_queue.py`) and leases (`services/tasks/api/lease_service.py`) to its core ports; execution adapts tasks (`services/execution/api/task_service.py`). Driving adapters import only the public contract — the errors a Server raises are part of that contract (`api/<service>/errors.py`), not the provider's private package.
+Cross-service consumption goes through driving adapters on the consumer side: tasks adapts messaging (`services/tasks/api/message_queue.py`) and leases (`services/tasks/api/lease_service.py`) to its core ports; execution adapts tasks (`services/execution/api/task_service.py`); schedules adapts tasks (`services/schedules/api/task_service.py`). Driving adapters import only the public contract — the errors a Server raises are part of that contract (`api/<service>/errors.py`), not the provider's private package.
 
 ## Data
 
