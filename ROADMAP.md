@@ -30,11 +30,15 @@ Deviation from plan: the tasks Sweeper was dropped — broker visibility-timeout
 
 Milestone: create-task-then-execute works through the new architecture. ✓ (see examples/)
 
-## Phase 5 — Schedules migration
+## Phase 5 — Schedules migration (PARTIAL)
 
 Depends on: Phase 4.
 
-Schedules refactored to the same pattern (api/core/sqlite/background, public contract in `schlange/api/schedules/`). Schedule firing is already idempotent via deterministic task ids, so leader election is optional — decide whether uniform leader-gating is worth it.
+Schedules refactored to the same pattern (api/core/sqlite/background). Schedule firing consumes tasks through the public contract via a driving adapter (`services/schedules/api/task_service.py`), not tasks core directly. Firing is lease-gated — the ScheduleWorker acquires the `schedules-worker` lease each tick, mirroring the Dispatcher. Deterministic task ids still cover crash recovery (leader dies mid-fire, lease expires, new leader re-fires the same sequence → no-op).
+
+Done: api/core/sqlite/background structure; schedules consumes tasks via the tasks API driving adapter; lease-gated firing.
+
+Remaining: public contract in `schlange/api/schedules/` (deferred — no consumer yet, per the lazy-contracts rule).
 
 Milestone: schedule demo works through the new path.
 
