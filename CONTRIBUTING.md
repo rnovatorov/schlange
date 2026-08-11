@@ -6,7 +6,7 @@ We use pipenv for managing development dependencies. See the Makefile for availa
 
 ## Architecture
 
-See package docstrings for architectural guidance.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for design decisions and [ROADMAP.md](ROADMAP.md) for build order. Package docstrings provide additional detail.
 
 ## Code Style
 
@@ -17,7 +17,7 @@ See package docstrings for architectural guidance.
 
 ## Design Process
 
-Major features are designed via specs in `specs/`. Specs are committed together with their implementation.
+Work is organized into phases tracked in [ROADMAP.md](ROADMAP.md). Design decisions are recorded in [ARCHITECTURE.md](ARCHITECTURE.md). Per phase: design → implement → verify → commit.
 
 ## Submitting Changes
 
