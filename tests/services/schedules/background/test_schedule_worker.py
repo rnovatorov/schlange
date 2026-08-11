@@ -27,10 +27,7 @@ class ScheduleWorkerWorkTest(unittest.TestCase):
     def test_work_fires_schedules_when_acquire_succeeds(self):
         service = mock.MagicMock()
         service.acquire_lease.return_value = True
-        service.fireable_schedules.side_effect = [
-            [_schedule("s1"), _schedule("s2")],
-            [],
-        ]
+        service.fireable_schedules.return_value = [_schedule("s1"), _schedule("s2")]
         worker = schedules_background.ScheduleWorker(
             schedule_service=service, holder="h", key="k", ttl=5.0, interval=1.0
         )
@@ -42,10 +39,7 @@ class ScheduleWorkerWorkTest(unittest.TestCase):
     def test_work_continues_after_io_error(self):
         service = mock.MagicMock()
         service.acquire_lease.return_value = True
-        service.fireable_schedules.side_effect = [
-            [_schedule("s1"), _schedule("s2")],
-            [],
-        ]
+        service.fireable_schedules.return_value = [_schedule("s1"), _schedule("s2")]
         service.fire_schedule.side_effect = [IOError("boom"), mock.MagicMock()]
         worker = schedules_background.ScheduleWorker(
             schedule_service=service, holder="h", key="k", ttl=5.0, interval=1.0
@@ -58,10 +52,7 @@ class ScheduleWorkerWorkTest(unittest.TestCase):
     def test_work_continues_after_domain_error(self):
         service = mock.MagicMock()
         service.acquire_lease.return_value = True
-        service.fireable_schedules.side_effect = [
-            [_schedule("s1"), _schedule("s2")],
-            [],
-        ]
+        service.fireable_schedules.return_value = [_schedule("s1"), _schedule("s2")]
         service.fire_schedule.side_effect = [
             schedules_core.ScheduleNotFoundError(),
             mock.MagicMock(),

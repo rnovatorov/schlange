@@ -26,12 +26,8 @@ class ScheduleWorker(background.Worker):
     def work(self) -> None:
         if not self.schedule_service.acquire_lease(self.key, self.holder, self.ttl):
             return
-        while True:
-            schedules = self.schedule_service.fireable_schedules()
-            if not schedules or self.stopping.is_set():
-                return
-            for schedule in schedules:
-                self._fire_schedule(schedule)
+        for schedule in self.schedule_service.fireable_schedules():
+            self._fire_schedule(schedule)
 
     def _fire_schedule(self, schedule: core.Schedule) -> None:
         try:
