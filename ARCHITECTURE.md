@@ -6,7 +6,7 @@ Decisions, not rationale. Build order is in [ROADMAP.md](ROADMAP.md).
 
 - **tasks** — task lifecycle, owns Dispatcher (publishes executable tasks to broker). Tasks carry a `kind` for routing. Dispatcher is leader-elected.
 - **execution** — stateless. Consumes from broker, runs handlers, reports back via `end_execution`. Scales horizontally (per-kind consumer workers).
-- **schedules** — fires schedules by creating tasks. Not leader-elected: firing is idempotent via deterministic task ids.
+- **schedules** — fires schedules by creating tasks. Leader-elected (ScheduleWorker); firing is idempotent via deterministic task ids, which covers crash recovery (leader dies mid-fire, lease expires, new leader re-fires the same sequence → no-op).
 - **messaging** — durable SQS-like queue: visibility-timeout redelivery, per-queue DLQ. Built-in; replaceable by external broker.
 - **leases** — leader election primitive.
 
@@ -47,7 +47,7 @@ Each DB opens three connection pools: read (`synchronous=NORMAL`), write (`synch
 
 ## Concurrency
 
-Crash propagation: a worker thread that raises stores the error and sends SIGINT to its own process; `wait()` re-raises the stored error. No silent thread death. `Schlange.stop()` cancels all workers, then raises `ExceptionGroup` if any failed. Leader election via leases for singleton roles (Dispatcher).
+Crash propagation: a worker thread that raises stores the error and sends SIGINT to its own process; `wait()` re-raises the stored error. No silent thread death. `Schlange.stop()` cancels all workers, then raises `ExceptionGroup` if any failed. Leader election via leases for singleton roles (Dispatcher, ScheduleWorker).
 
 ## Reliability
 
@@ -75,7 +75,7 @@ Protocol is internal to our SQLite broker. External brokers implement the consum
 
 Etcd-compatible API: `acquire(key, holder, ttl)`, `refresh(key, holder)`, `release(key, holder)`, `is_holder(key, holder)`. Implementable on SQLite, etcd, Redis.
 
-Lease holder pattern: each leader-gated worker acquires its lease every tick (acquire-or-renew is idempotent). If acquired, do work; if not, skip. TTL must exceed worker interval so the lease survives between ticks. Let expire on death. Per-worker lease keys (e.g. `tasks-dispatcher`). Workers use only `acquire` — one call per tick covers both leadership check and renewal; no refresher thread. A background Reaper deletes expired leases.
+Lease holder pattern: each leader-gated worker acquires its lease every tick (acquire-or-renew is idempotent). If acquired, do work; if not, skip. TTL must exceed worker interval so the lease survives between ticks. Let expire on death. Per-worker lease keys (e.g. `tasks-dispatcher`, `schedules-worker`). Workers use only `acquire` — one call per tick covers both leadership check and renewal; no refresher thread. A background Reaper deletes expired leases.
 
 Leases accepted as SPOF (k8s analogy).
 

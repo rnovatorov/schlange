@@ -6,6 +6,7 @@ from typing import List, Optional
 
 from schlange.internal import core as internal_core
 
+from .lease_service import LeaseService
 from .schedule import Schedule
 from .schedule_repository import ScheduleRepository
 from .schedule_specification import ScheduleSpecification
@@ -17,7 +18,12 @@ class ScheduleService:
 
     schedule_repository: ScheduleRepository
     task_service: TaskService
+    lease_service: LeaseService
     task_visibility_timeout: float
+
+    def acquire_lease(self, key: str, holder: str, ttl: float) -> bool:
+        """Acquire or renew a lease via the lease service port."""
+        return self.lease_service.acquire_lease(key=key, holder=holder, ttl=ttl)
 
     def create_schedule(
         self,

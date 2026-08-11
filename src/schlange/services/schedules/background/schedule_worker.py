@@ -7,12 +7,25 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ScheduleWorker(background.Worker):
+    """Leader-gated worker that fires fireable schedules."""
 
-    def __init__(self, interval: float, schedule_service: core.ScheduleService) -> None:
+    def __init__(
+        self,
+        schedule_service: core.ScheduleService,
+        holder: str,
+        key: str,
+        ttl: float,
+        interval: float,
+    ) -> None:
         super().__init__(name="schlange.ScheduleWorker", interval=interval)
         self.schedule_service = schedule_service
+        self.holder = holder
+        self.key = key
+        self.ttl = ttl
 
     def work(self) -> None:
+        if not self.schedule_service.acquire_lease(self.key, self.holder, self.ttl):
+            return
         while True:
             schedules = self.schedule_service.fireable_schedules()
             if not schedules or self.stopping.is_set():

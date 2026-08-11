@@ -8,6 +8,7 @@ from .errors import (
     ScheduleNotReadyError,
     ScheduleUpdatedConcurrentlyError,
 )
+from .lease_service import LeaseService
 from .schedule import Schedule
 from .schedule_firing import ScheduleFiring
 from .schedule_repository import ScheduleRepository
@@ -17,6 +18,7 @@ from .task_service import TaskService
 
 __all__ = [
     "Error",
+    "LeaseService",
     "Schedule",
     "ScheduleAlreadyExistsError",
     "ScheduleFiring",

@@ -50,6 +50,7 @@ DEFAULT_CLEANUP_POLICY = tasks_core.CleanupPolicy(
 DEFAULT_CLEANUP_WORKER_INTERVAL = 60
 
 DEFAULT_SCHEDULE_WORKER_INTERVAL = 1
+DEFAULT_SCHEDULE_WORKER_LEASE_TTL = 5.0
 
 DEFAULT_DISPATCHER_INTERVAL = 1
 DEFAULT_DISPATCHER_LEASE_TTL = 5.0
@@ -121,6 +122,7 @@ class Schlange:
         cleanup_policy: tasks_core.CleanupPolicy = DEFAULT_CLEANUP_POLICY,
         cleanup_worker_interval: float = DEFAULT_CLEANUP_WORKER_INTERVAL,
         schedule_worker_interval: float = DEFAULT_SCHEDULE_WORKER_INTERVAL,
+        schedule_worker_lease_ttl: float = DEFAULT_SCHEDULE_WORKER_LEASE_TTL,
         dispatcher_interval: float = DEFAULT_DISPATCHER_INTERVAL,
         dispatcher_lease_ttl: float = DEFAULT_DISPATCHER_LEASE_TTL,
         lease_reaper_interval: float = DEFAULT_LEASE_REAPER_INTERVAL,
@@ -174,9 +176,13 @@ class Schlange:
             schedule_task_service = schedules_api.TaskServiceAdapter(
                 task_server=task_server,
             )
+            schedule_lease_service = schedules_api.LeaseService(
+                lease_server=lease_server,
+            )
             schedule_service = schedules_core.ScheduleService(
                 schedule_repository=schedule_repository,
                 task_service=schedule_task_service,
+                lease_service=schedule_lease_service,
                 task_visibility_timeout=default_visibility_timeout,
             )
             task_service_adapter = execution_api.TaskServiceAdapter(
@@ -209,8 +215,11 @@ class Schlange:
                 cleanup_policy=cleanup_policy,
             )
             schedule_worker = schedules_background.ScheduleWorker(
-                interval=schedule_worker_interval,
                 schedule_service=schedule_service,
+                holder=str(uuid.uuid4()),
+                key="schedules-worker",
+                ttl=schedule_worker_lease_ttl,
+                interval=schedule_worker_interval,
             )
             leases_reaper = leases_background.Reaper(
                 service=lease_service,
