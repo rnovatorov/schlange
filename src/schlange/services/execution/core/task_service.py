@@ -1,7 +1,7 @@
 import typing
 
 
-class TaskServicePort(typing.Protocol):
+class TaskService(typing.Protocol):
     """Driven port for task lifecycle operations."""
 
     def end_execution(

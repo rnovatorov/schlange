@@ -2,7 +2,7 @@ import dataclasses
 
 from .errors import NotFoundError
 from .handler import Handler, TaskExecution
-from .task_service import TaskServicePort
+from .task_service import TaskService
 
 
 @dataclasses.dataclass
@@ -10,7 +10,7 @@ class ExecutionService:
     """Executes task handlers and records the result via the task service port."""
 
     handlers: dict[str, Handler]
-    task_service: TaskServicePort
+    task_service: TaskService
 
     def execute(
         self,

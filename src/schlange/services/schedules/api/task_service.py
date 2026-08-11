@@ -3,7 +3,7 @@ from schlange.internal import core
 
 
 class TaskServiceAdapter:
-    """Adapts tasks API to schedules core TaskServicePort.
+    """Adapts tasks API to schedules core TaskService.
 
     create_task is idempotent for a given id: a duplicate (a schedule
     iteration that already fired) is swallowed — the deterministic id is

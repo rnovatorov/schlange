@@ -5,7 +5,7 @@ from schlange.services.execution import core
 
 
 class TaskServiceAdapter:
-    """Adapts tasks API to execution core TaskServicePort."""
+    """Adapts tasks API to execution core TaskService."""
 
     def __init__(self, task_server: tasks.Server) -> None:
         self.task_server = task_server

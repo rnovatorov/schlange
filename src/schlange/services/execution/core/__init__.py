@@ -6,7 +6,7 @@ from .errors import (
 )
 from .handler import Handler, TaskExecution
 from .service import ExecutionService
-from .task_service import TaskServicePort
+from .task_service import TaskService
 
 __all__ = [
     "AbortedError",
@@ -16,5 +16,5 @@ __all__ = [
     "Handler",
     "NotFoundError",
     "TaskExecution",
-    "TaskServicePort",
+    "TaskService",
 ]

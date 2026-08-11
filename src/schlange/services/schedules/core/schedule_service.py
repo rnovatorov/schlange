@@ -9,14 +9,14 @@ from schlange.internal import core as internal_core
 from .schedule import Schedule
 from .schedule_repository import ScheduleRepository
 from .schedule_specification import ScheduleSpecification
-from .task_service import TaskServicePort
+from .task_service import TaskService
 
 
 @dataclasses.dataclass
 class ScheduleService:
 
     schedule_repository: ScheduleRepository
-    task_service: TaskServicePort
+    task_service: TaskService
     task_visibility_timeout: float
 
     def create_schedule(

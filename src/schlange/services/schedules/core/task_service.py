@@ -3,7 +3,7 @@ import typing
 from schlange.internal import core as internal_core
 
 
-class TaskServicePort(typing.Protocol):
+class TaskService(typing.Protocol):
     """Driven port for creating tasks from schedules.
 
     create_task is idempotent for a given id: a duplicate (a schedule
