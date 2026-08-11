@@ -16,21 +16,25 @@ Leases service (own DB, etcd-compatible API). Tested in isolation.
 
 Depends on: Phase 2.
 
-Messaging service (own DB), RPC-style Protocol (publish, claim, ack, nack, session lifecycle), competing consumers, dead-letter boolean, session-based consumer death detection, periodic sweeper. Tested in isolation.
+Messaging service (own DB), SQS-like RPC Protocol (declare_queue, publish, claim, ack, requeue), competing consumers, per-message visibility timeout, per-queue DLQ with max_delivery_count. Tested in isolation.
 
-## Phase 4 — Integration
+Deviation from plan: sessions and heartbeat-based consumer death detection were built, then replaced by the simpler SQS model — visibility-timeout expiry covers consumer death, so no sessions, heartbeats, or sweeper.
+
+## Phase 4 — Integration (DONE)
 
 Depends on: Phases 2, 3.
 
-tasks public contract (`kind` on tasks, `task_kind` on schedules; `end_execution` by execution seq_num), Dispatcher (acquire-on-tick leader election, begins executions, publishes to broker, one outstanding at a time) and Sweeper (leader-gated, acquire-on-tick), execution driving adapter (per-kind sessions, end on completion), rewired composition root.
+Tasks public contract (`kind` on tasks, `end_execution` by execution seq_num), Dispatcher (acquire-on-tick leader election, begins executions, publishes to broker, one outstanding at a time), execution service (stateless, handler registry + tasks port), per-kind consumer workers, rewired composition root.
 
-Milestone: create-task-then-execute works through the new architecture.
+Deviation from plan: the tasks Sweeper was dropped — broker visibility-timeout redelivery recovers crashed executors, making a sweeper unnecessary.
+
+Milestone: create-task-then-execute works through the new architecture. ✓ (see examples/)
 
 ## Phase 5 — Schedules migration
 
 Depends on: Phase 4.
 
-Schedules refactored to the same pattern (api/core/sqlite/background), leader-elected firing.
+Schedules refactored to the same pattern (api/core/sqlite/background, public contract in `schlange/api/schedules/`). Schedule firing is already idempotent via deterministic task ids, so leader election is optional — decide whether uniform leader-gating is worth it.
 
 Milestone: schedule demo works through the new path.
 
