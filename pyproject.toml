@@ -3,6 +3,8 @@ name = "schlange-queue"
 version = "0.1.2"
 description = "Lightweight, persistent, single-node task queue with at-least-once delivery guarantee"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [{ name = "Roman Novatorov", email = "roman.novatorov@gmail.com" }]
 dependencies = []
