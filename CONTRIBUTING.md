@@ -2,7 +2,7 @@
 
 ## Development
 
-We use pipenv for managing development dependencies. See the Makefile for available commands.
+We use uv for managing development dependencies. See the Makefile for available commands.
 
 ## Architecture
 
