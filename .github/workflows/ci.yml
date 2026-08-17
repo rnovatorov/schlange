@@ -16,6 +16,7 @@ jobs:
         with:
           python-version: '3.13'
           enable-cache: true
+          cache-suffix: ${{ github.job }}
       - run: uv sync --locked
       - run: make lint
 
@@ -31,5 +32,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
+          cache-suffix: ${{ github.job }}
       - run: uv sync --locked
       - run: make test
