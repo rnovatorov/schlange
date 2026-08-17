@@ -19,3 +19,6 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = "schlange"
+
+[tool.black]
+target-version = ["py311"]
