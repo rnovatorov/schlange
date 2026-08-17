@@ -34,12 +34,6 @@ test-unit:
 	uv run python -m unittest discover -v
 
 
-.PHONY: .ci-setup-env
-.ci-setup-env:
-	pip install pipenv
-	pipenv install --dev
-
-
 .PHONY: upload-to-pypi
 upload-to-pypi: dist
 ifndef PYPI_API_TOKEN
