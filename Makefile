@@ -19,7 +19,7 @@ lint-mypy:
 
 .PHONY: lint-pyflakes
 lint-pyflakes:
-	uv run pyflakes .
+	uv run pyflakes src tests examples
 
 
 .PHONY: test
