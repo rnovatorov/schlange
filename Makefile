@@ -27,7 +27,7 @@ test: test-examples test-unit
 
 .PHONY: test-examples
 test-examples:
-	uv run python -m doctest -v examples/*
+	uv run python -m doctest -v examples/*.py
 
 .PHONY: test-unit
 test-unit:
