@@ -32,13 +32,3 @@ test-examples:
 .PHONY: test-unit
 test-unit:
 	uv run python -m unittest discover -v
-
-
-.PHONY: upload-to-pypi
-upload-to-pypi:
-ifndef PYPI_API_TOKEN
-	$(error PYPI_API_TOKEN is not defined)
-endif
-	rm --recursive --force dist
-	uv build
-	UV_PUBLISH_TOKEN=$(PYPI_API_TOKEN) uv publish
