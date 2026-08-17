@@ -131,23 +131,28 @@ class Schlange:
         read_pool_capacity = calculate_optimal_database_read_pool_capacity(
             consumers_per_kind, len(handlers)
         )
-        with sqlite.Database.open(
-            path=task_database_path,
-            read_pool_capacity=read_pool_capacity,
-            write_pool_capacity=write_pool_capacity,
-            sync_write_pool_capacity=write_pool_capacity,
-        ) as task_db, sqlite.Database.open(
-            path=schedule_database_path,
-            read_pool_capacity=read_pool_capacity,
-        ) as schedule_db, sqlite.Database.open(
-            path=lease_database_path,
-            read_pool_capacity=read_pool_capacity,
-        ) as lease_db, sqlite.Database.open(
-            path=messaging_database_path,
-            read_pool_capacity=read_pool_capacity,
-            write_pool_capacity=write_pool_capacity,
-            sync_write_pool_capacity=write_pool_capacity,
-        ) as messaging_db:
+        with (
+            sqlite.Database.open(
+                path=task_database_path,
+                read_pool_capacity=read_pool_capacity,
+                write_pool_capacity=write_pool_capacity,
+                sync_write_pool_capacity=write_pool_capacity,
+            ) as task_db,
+            sqlite.Database.open(
+                path=schedule_database_path,
+                read_pool_capacity=read_pool_capacity,
+            ) as schedule_db,
+            sqlite.Database.open(
+                path=lease_database_path,
+                read_pool_capacity=read_pool_capacity,
+            ) as lease_db,
+            sqlite.Database.open(
+                path=messaging_database_path,
+                read_pool_capacity=read_pool_capacity,
+                write_pool_capacity=write_pool_capacity,
+                sync_write_pool_capacity=write_pool_capacity,
+            ) as messaging_db,
+        ):
             task_db.migrate(migrations=tasks_sqlite.MIGRATIONS)
             schedule_db.migrate(migrations=schedules_sqlite.MIGRATIONS)
             lease_db.migrate(migrations=leases_sqlite.MIGRATIONS)
