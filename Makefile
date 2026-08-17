@@ -7,19 +7,19 @@ lint: lint-black lint-isort lint-mypy lint-pyflakes
 
 .PHONY: lint-black
 lint-black:
-	pipenv run black --check .
+	uv run black --check .
 
 .PHONY: lint-isort
 lint-isort:
-	pipenv run isort --check-only .
+	uv run isort --check-only .
 
 .PHONY: lint-mypy
 lint-mypy:
-	pipenv run mypy .
+	uv run mypy .
 
 .PHONY: lint-pyflakes
 lint-pyflakes:
-	pipenv run pyflakes .
+	uv run pyflakes .
 
 
 .PHONY: test
@@ -27,11 +27,11 @@ test: test-examples test-unit
 
 .PHONY: test-examples
 test-examples:
-	pipenv run python -m doctest -v examples/*
+	uv run python -m doctest -v examples/*
 
 .PHONY: test-unit
 test-unit:
-	pipenv run python -m unittest discover -v
+	uv run python -m unittest discover -v
 
 
 .PHONY: .ci-setup-env
