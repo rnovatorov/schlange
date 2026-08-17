@@ -35,16 +35,10 @@ test-unit:
 
 
 .PHONY: upload-to-pypi
-upload-to-pypi: dist
+upload-to-pypi:
 ifndef PYPI_API_TOKEN
 	$(error PYPI_API_TOKEN is not defined)
 endif
-	UV_PUBLISH_TOKEN=$(PYPI_API_TOKEN) uv publish
-
-dist.tar: dist
-	rm --force $@
-	tar --create --file $@ $<
-
-.PHONY: dist
-dist:
+	rm --recursive --force dist
 	uv build
+	UV_PUBLISH_TOKEN=$(PYPI_API_TOKEN) uv publish
