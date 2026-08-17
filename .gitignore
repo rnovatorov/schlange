@@ -113,6 +113,3 @@ venv.bak/
 *.db
 *.db-shm
 *.db-wal
-
-# Pipfile.lock
-Pipfile.lock
