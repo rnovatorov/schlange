@@ -1,6 +1,6 @@
 [project]
 name = "schlange-queue"
-version = "0.1.2"
+version = "0.2.0"
 description = "Lightweight, persistent, single-node task queue with at-least-once delivery guarantee"
 readme = "README.md"
 license = "MIT"
