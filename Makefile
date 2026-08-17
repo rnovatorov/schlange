@@ -45,10 +45,7 @@ upload-to-pypi: dist
 ifndef PYPI_API_TOKEN
 	$(error PYPI_API_TOKEN is not defined)
 endif
-	@pipenv run twine upload \
-		--username __token__ \
-		--password $(PYPI_API_TOKEN) \
-		$</*
+	UV_PUBLISH_TOKEN=$(PYPI_API_TOKEN) uv publish
 
 dist.tar: dist
 	rm --force $@
@@ -56,4 +53,4 @@ dist.tar: dist
 
 .PHONY: dist
 dist:
-	pipenv run python setup.py bdist_wheel
+	uv build
